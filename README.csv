@@ -1,11 +1,11 @@
-#About the repositry:
-This repository contains data from long-term incubation experiment conducted in České Budějovice. The code analyzing the data will be added to the repository irregularly. It all depends on work progress.
+#About the repository:
+This repository contains data from long-term incubation experiment conducted in České Budějovice. The code analyzing the data will be added to repository irregularly. It all depends on work progress.
 
 #About the soils: 
-The incubation experiment was conducted with two different soils sampled in two different forested catchments in Czech Republic (Plesne and Certovo lake catchments). The catchments are intensivily studies for last 20 years. To learn more about the catchment, follow the publication of Jiri Kopacek. 
+The incubation experiment was conducted with two different soils sampled in two different forested catchments in Czech Republic (Plesne and Certovo lake catchments). The catchments are intensively studies for last 20 years. To learn more about the catchment and their soils, follow the publications of Jiri Kopacek. 
 
 #About the experiment
-The soils were supplemented with 13C labelled glucose and incubated for two months in dark at 15°C. Several carbon, nitrogen and phosphorus pools and/or fluxes were measured over time. The signal of labelled glucose was tracked into all relevant pools. To know the details about the incubation experiment design and the purpose of the experiment, write me to petacapek@gmail.com or capekp00@jcu.cz. 
+The soils were supplemented with 13C labelled glucose and incubated for two months in dark at 15°C. Several carbon, nitrogen and phosphorus pools and/or fluxes were measured over time. The signal of labelled glucose was tracked into all relevant pools. To learn details about the design and purpose of the incubation experiment, write me to petacapek@gmail.com or capekp00@jcu.cz. 
 
 #About data
-The data in the “DataIncubation.csv” file are organized so to allow direct export to any statical program. The first row contain abbreviations of measured variables or descriptive information. The explanation of the abbreviations are provided in the “DataGuide.csv” file.  
+The data are all in the “DataIncubation.csv” file and are organized so to allow direct export to any statical program. The first row contain abbreviations of measured variables or relevant descriptive information. The explanation of the abbreviations are provided in the “DataGuide.csv” file.  
