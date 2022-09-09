@@ -1,5 +1,6 @@
 Analysis,units,Note,Reference,,
 Time,days,,,,
+Treatment,aerobic or anaerobic,Headspace of the incubation bottles was regularly flushed with either air (aerobic conditions) or nitrogen (anaerobic conditions),,,
 pH,,in water (1:100 w/w soil:water),,,
 ATP ,nmol(ATP) g-1,original method optimized for the samples,"Eiland, F., 1983. A simple method for quantitative determination of ATP in soil. Soil Biol. Biochem. 15, 665–670. https://doi.org/10.1016/0038-0717(83)90030-5",,
 Gl,umol(C-glucose) g-1,glucose concentration in soil,,,
