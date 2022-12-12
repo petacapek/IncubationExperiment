@@ -17,6 +17,8 @@ DONw,umol(N-DON) g-1,Water-extractable dissolved organic nitrogen (1:100 w/w soi
 NH4w,umol(N-NH4) g-1,Water-extractable amonium (1:100 w/w soil:water),,,
 NO3w,umol(N-NO3) g-1,Water-extractable nitrates (1:100 w/w soil:water),,,
 PO4w,umol(P-PO4) g-1,Water-extractable soluble reactive phosphorus (1:100 w/w soil:water),,,
+DPw,umol(P) g-1,Water-extractable dissolved total phosphorus (1:100 w/w soil:water),,,
+DOPw,umol(P) g-1,Water-extractable dissolved organic phosphorus (1:100 w/w soil:water) = DP – PO4w,,,
 Al,umol(Al) g-1,Water-extractable aluminium (1:100 w/w soil:water),,,
 S,umol(S) g-1,Water-extractable sulfur (1:100 w/w soil:water),,,
 Fe,umol(Fe) g-1,Water-extractable iron (1:100 w/w soil:water),,,
