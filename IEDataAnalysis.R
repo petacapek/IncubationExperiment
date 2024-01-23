@@ -14,7 +14,7 @@ summary(IE)
 #==================Chemical parameters
 #Glucose concentration
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
-  summarise(y = mean(500-Gl, na.rm = T), ySD = sd(500-Gl, na.rm = T)) %>% 
+  summarise(y = mean(500-Glraw, na.rm = T), ySD = sd(500-Glraw, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
@@ -22,7 +22,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   xlab("Time (days)") + ylab(expression(paste("Glucose (", mu, "mol C g ", DW^{-1}, ")"))) +
   geom_hline(yintercept = 500)
 #pH
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(pH, na.rm = T), ySD = sd(pH, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -63,7 +63,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("Cumulative respiration (", mu, "mol C g ", DW^{-1}, ")")))
 #DOCw
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(DOCw, na.rm = T), ySD = sd(DOCw, na.rm = T),
             y2 = mean(Gl, na.rm = T), y2SD = sd(Gl, na.rm = T),
             y3 = mean(Cpotass, na.rm = T), y3SD = sd(Cpotass, na.rm = T)) %>% 
@@ -75,7 +75,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>%
   #geom_point(cex = 6, pch = 21, fill = "green", aes(x = Time, y = y3), alpha = 0.5) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD)) + 
   xlab("Time (days)") + ylab(expression(paste("DOC in water (", mu, "mol C g ", DW^{-1}, ")")))
 #DONw
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(DONw, na.rm = T), ySD = sd(DONw, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -83,7 +83,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("DON in water (", mu, "mol N g ", DW^{-1}, ")")))
 #NH4w
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(NH4w, na.rm = T), ySD = sd(NH4w, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -91,7 +91,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(NH[4], " in water (", mu, "mol N g ", DW^{-1}, ")")))
 #NO3w
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(NO3w, na.rm = T), ySD = sd(NO3w, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -146,7 +146,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(V[MAX], " of BG (", mu, "mol MUB-C g ", DW^{-1}~hour^{-1}, ")")))
 #Beta-glucosidase Km
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -154,7 +154,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[M], " of BG (", mu, "mol MUB-C g ", DW^{-1}, ")")))
 #Beta-glucosidase Ki
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -162,7 +162,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[i], " of BG (", mu, "mol MUB-C g ", DW^{-1}, ")")))
 #Cellobiosidase Vmax
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -170,7 +170,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(V[MAX], " of CL (", mu, "mol MUB-C g ", DW^{-1}~hour^{-1}, ")")))
 #Cellobiosidase Km
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -178,7 +178,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[M], " of CL (", mu, "mol MUB-C g ", DW^{-1}, ")")))
 #Cellobiosidase Ki
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -186,7 +186,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[i], " of CL (", mu, "mol MUB-C g ", DW^{-1}, ")")))
 #Chitinase Vmax
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -194,7 +194,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(V[MAX], " of Ch (", mu, "mol MUB-C g ", DW^{-1}~hour^{-1}, ")")))
 #Chitinase Km
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -202,7 +202,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[M], " of Ch (", mu, "mol MUB-C g ", DW^{-1}, ")")))
 #Chitinase Ki
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -210,7 +210,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[i], " of Ch (", mu, "mol MUB-C g ", DW^{-1}, ")")))
 #Leucine-aminopeptidase Vmax
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -218,7 +218,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(V[MAX], " of L (", mu, "mol MUB-C g ", DW^{-1}~hour^{-1}, ")")))
 #Leucine-aminopeptidase Km
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -226,7 +226,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[M], " of L (", mu, "mol MUB-C g ", DW^{-1}, ")")))
 #Phosphatase Vmax
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -234,7 +234,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(V[MAX], " of P (", mu, "mol MUB-C g ", DW^{-1}~hour^{-1}, ")")))
 #Phosphatase Km
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -242,7 +242,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[M], " of P (", mu, "mol MUB-C g ", DW^{-1}, ")")))
 #Phosphatase Ki
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -250,8 +250,10 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[i], " of P (", mu, "mol MUB-C g ", DW^{-1}, ")")))
+
+ggplot(IE, aes(pH, VmaxCL)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment)) + theme_min
 
 #===========Inhibition of enzyme activity by changing product concentration due to microbial uptake===========#
 #=====================Script that calculate product concentration is uploaded=============================#
@@ -314,15 +316,15 @@ CI2 <- nls(Time ~ -(Km*(S0/Ki + P0/Ki + 1)*))
 IE$CflushOut <- c("False")
 IE[(IE$Soil == "Plesne" & IE$Treatment == "Aerobic" & IE$Time == 2), "CflushOut"] <- c("True")
 
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & CflushOut == "False") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
   summarise(y = mean(Cflush, na.rm = T), ySD = sd(Cflush, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(CHCl[3], " flush (", mu, "mol C g ", DW^{-1}, ")")))
 #Nflush
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(Nflush, na.rm = T), ySD = sd(Nflush, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -330,15 +332,39 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(CHCl[3], " flush (", mu, "mol N g ", DW^{-1}, ")")))
 #Pflush
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(Pflush, na.rm = T), ySD = sd(Pflush, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(CHCl[3], " flush (", mu, "mol P g ", DW^{-1}, ")")))
+#C to P in flush
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(Cflush/Pflush, na.rm = T), ySD = sd(Cflush/Pflush, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste(frac(C, P)," in ", CHCl[3], " flush (mol/mol)")))
+#C to N in flush
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(Cflush/Nflush, na.rm = T), ySD = sd(Cflush/Nflush, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste(frac(C, N)," in ", CHCl[3], " flush (mol/mol)")))
+#N to P in flush
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(Cflush/Nflush, na.rm = T), ySD = sd(Cflush/Nflush, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste(frac(N, P)," in ", CHCl[3], " flush (mol/mol)")))
 #DNA
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(DNA, na.rm = T), ySD = sd(DNA, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -346,7 +372,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("DNA (", mu, "mol C-DNA g ", DW^{-1}, ")")))
 #RNA
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(RNA, na.rm = T), ySD = sd(RNA, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -354,7 +380,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>%
   facet_wrap(Treatment~Soil, scales = "free_y") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("RNA (", mu, "mol C-RNA g ", DW^{-1}, ")")))
 #ATP
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(ATP, na.rm = T), ySD = sd(ATP, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -362,7 +388,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>%
   facet_wrap(Treatment~Soil, scales = "free_y") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("ATP (", mu, "mol C-ATP g ", DW^{-1}, ")")))
 #PLFA
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(PLFA, na.rm = T), ySD = sd(PLFA, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -370,12 +396,12 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>%
   facet_wrap(Treatment~Soil, scales = "free_y") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("PLFA (", mu, "mol C-PLFA g ", DW^{-1}, ")")))
 #CLC to DNA
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(Cflush/DNA, na.rm = T), ySD = sd(Cflush/DNA, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(" ")))
 
 #======================Isotopes
@@ -550,9 +576,11 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab("Residual glucose (%)") 
 #CUE from glucose and cumulative respiration
+IE$CUE_RgGl <- 1 - IE$CumulativeRg/(500 - IE$Glraw)
+IE$CUE_RgGl <- ifelse(IE$CUE_RgGl < 0, NA, IE$CUE_RgGl)
+IE$CUE_RgGl <- ifelse(IE$CUE_RgGl > 1, NA, IE$CUE_RgGl)
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
-  summarise(y = mean(1 - CumulativeRg/(500 - Gl), na.rm = T), ySD = sd(1 - CumulativeRg/(500 - Gl), na.rm = T)) %>% 
-  filter(y > 0.1) %>% 
+  summarise(y = mean(CUE_RgGl, na.rm = T), ySD = sd(CUE_RgGl, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
@@ -568,7 +596,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste({}^{13},EC-K[2],SO[4], " (at%)")))
 
-#Glucose C in K2SO4 extract
+#Glucose C in K2SO4 extract in umol C/g DW
 IE$Cpotassgl <- numeric(length = nrow(IE))
 
 for(i in 1:nrow(IE)){
@@ -594,7 +622,7 @@ IE[IE$Time == 0, "Cpotassgl"] <- 0
 
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(Cpotassgl, na.rm = T), ySD = sd(Cpotassgl, na.rm = T),
-            y2 = mean(Gl, na.rm = T), y2SD = sd(Gl, na.rm = T)) %>% 
+            y2 = mean(Glraw, na.rm = T), y2SD = sd(Glraw, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
@@ -602,7 +630,13 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   geom_point(cex = 6, pch = 21, fill = "red", aes(x = Time, y = y2), alpha = 0.5) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), col = "red") +
   xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",EC-K[2],SO[4], " (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 
-#Glucose C in Cflush extract
+#Glucose concentration vs glucose content of K2SO4 extract
+ggplot(IE, aes(Cpotassgl, Glraw)) + geom_point(cex = 6, pch = 21) + theme_min +
+  xlab(expression(paste("Glucose-C in ",EC-K[2],SO[4], " (", mu, "mol C ",g~(DW)^{-1}, ")" ))) +
+  ylab(expression(paste("Glucose-C (", mu, "mol C ",g~(DW)^{-1}, ")" ))) + geom_abline(intercept = 0, slope = 1) +
+  facet_grid(Treatment~Soil)
+
+#Glucose C in Cflush extract in umol C/g DW
 IE$CFlushgl <- numeric(length = nrow(IE))
 for(i in 1:nrow(IE)){
   if(IE$Soil[i] == "Plesne" & IE$Treatment[i] == "Aerobic"){
@@ -625,6 +659,8 @@ for(i in 1:nrow(IE)){
 }
 
 IE[IE$Time == 0, "CFlushgl"] <- 0
+IE$CflushOut[21] <- "True"
+IE$CflushOut[17] <- "True"
 
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(CflushAtm, na.rm = T), ySD = sd(CflushAtm, na.rm = T),
@@ -635,24 +671,41 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 
-IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
-  summarise(y = mean(CFlushgl/500, na.rm = T), ySD = sd(CFlushgl/500, na.rm = T),
-            y2 = mean(Gl/500, na.rm = T), y2SD = sd(Gl/500, na.rm = T),
-            y3 = mean(CumulativeRg/500, na.rm = T), y3SD = sd(CumulativeRg/500, na.rm = T),
-            y4 = mean((CFlushgl+Gl+CumulativeRg)/500, na.rm = T), y4SD = sd((CFlushgl+Gl+CumulativeRg)/500, na.rm = T)) %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
+  summarise(y = mean(CFlushgl, na.rm = T), ySD = sd(CFlushgl, na.rm = T),
+            y2 = mean(Cflush, na.rm = T), y2SD = sd(Cflush, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
-  geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
-  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y4)) + geom_errorbar(aes(ymin = y4 - y4SD, ymax = y4 + y4SD), color = "red") +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
+  #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
+  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
   xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 
-#All possible CUE calculations
-##CUE = (Glucose(t0) - Glucose(t))/(Rcumulative(t))
-CUE1 <- IE[, 1:5]
-CUE1$CUE <- with(IE, (Gl0 - Gl)/CumulativeRg)
-CUE1$Legend <- c("Eq1")
+#Comparing glucose in Cflush with residual glucose C (everything that was not respired)
+IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
+  summarise(y = mean(CFlushgl, na.rm = T), ySD = sd(CFlushgl, na.rm = T),
+            y2 = mean((Gl0 - Glraw - CumulativeRg), na.rm = T), y2SD = sd((Gl0 - CumulativeRg), na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
+  xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 
-##CUE = (Cflush(t))/(Cflush(t) + Rcumulative(t))
+#===========================kec calculation
+IE$kec <- with(IE, CFlushgl/(Gl0 - Cpotassgl - CumulativeRg))
+IE$kec <- ifelse(IE$kec <= 0, NA, IE$kec)
+IE$kec <- ifelse(IE$kec >= 1, NA, IE$kec)
+
+IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
+  summarise(y = mean(kec, na.rm = T), ySD = sd(kec, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab("kec factor")
+
+
+
