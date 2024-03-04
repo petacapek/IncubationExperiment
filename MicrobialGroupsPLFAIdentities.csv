@@ -1,30 +1,28 @@
-PLFA marker identity,Formula,Microbial group,references
-,,,
+PLFA,Formula,Group,Ref,,
 C14,C15H30O2,Gram positive,"zelles(1997, 1999); Zak et al., 1996; Hanajík and  Fritze, 2009;
-Zogg et al., 1997; Ringelberg et al., 1997;  Bardgett et al.,1996;  Findlay and Dobbs 1993; Gunina et al. 2014"
-C15,C16H32O2,Gram positive,
-iC15,C16H32O2,Gram positive,
-aC15,C16H32O2,Gram positive,
-C16,C17H34O2,Gram positive,
-iC16,C17H34O2,Gram positive,
-iC17,C18H36O2,Gram positive,
-aC17,C18H36O2,Gram positive,
-iC18,C19H36O2,Gram positive,
-C18:1w5,C19H36O2,Gram positive,
-C16:1 w5,C17H32O2,Fungi,"zelles(1997, 1999); Zak et al., 1996; Hanajík and  Fritze 2009; Findlay and Dobbs (1993);
-Zogg et al., 1997; Ringelberg et al., 1997;  Bardgett et al.,1996; Frostegård and Bååth 1997; Olsson 1999; Gunina et al. 2014"
-C18:1 w9,C19H36O2,Fungi,
-C18:2 w6,C19H36O2,Fungi,
-10 MeC17,C18H36O2,Gram positive or Actinobacteria,"zelles(1997, 1999); Zak et al., 1996; Hanajík and  Fritze 2009;
-Zogg et al., 1997; Ringelberg et al., 1997,  Bardgett et al.,1996; Frostegård and Bååth 1997; Findlay and Dobbs (1993); Joergensen 2022; Kroppenstedt et al., 1984; Brennan 1988"
-10 MeC18,C19H38O2,Gram positive or Actinobacteria,
-C16:1 w7,C17H32O2,Gram negative," Zak et al., 1996; Zogg et al., 1997;  Ringelberg et al., 1997; Bardgett et al.,1996; zelles(1997, 1999);  Hanajík and Fritze 2009;  Bardgett et al.,1996; Frostegård and Bååth 1997; Findlay and Dobbs 1993; Taylor and Parks 1983; Joergensen 2022 "
-C18:1 w7,C19H36O2,Gram negative,
-cycC19,C19H38O2,Gram negative,
-C17:1 w8,C18H34O2,Gram negative,
-C19,C19H40O2,Non-specific bacterial marker,"zelles(1997, 1999); Findlay and Dobbs 1993; Buckeridge et al. 2020"
-C18,C18H38O4,Non-specific bacterial marker,
-C20,C20H42O2,Non-specific bacterial marker,
-C20:2 w6,C20H38O2,Protozoa,Lechavalier and Lechavalier 1988; Vestal and white 1989; Gunina et al. 2014
-C20:3 w6,C20H36O2,Protozoa,
-C20:4 w6,C20H34O2,Protozoa,
+Zogg et al., 1997; Ringelberg et al., 1997;  Bardgett et al.,1996;  Findlay and Dobbs 1993; Gunina et al. 2014",,
+C15,C16H32O2,Gram positive,,,
+iC15,C16H32O2,Gram positive,,,
+aC15,C16H32O2,Gram positive,,,
+C16_0,C17H34O2,Gram positive,,,
+iC16,C17H34O2,Gram positive,,,
+iC17,C18H36O2,Gram positive,,,
+aC17,C18H36O2,Gram positive,,,
+iC18,C19H36O2,Gram positive,,,
+C18_1w5,C19H36O2,Gram positive,,,
+C16_1w5,C17H32O2,Fungi,"zelles(1997, 1999); Zak et al., 1996; Hanajík and  Fritze 2009; Findlay and Dobbs (1993);
+Zogg et al., 1997; Ringelberg et al., 1997;  Bardgett et al.,1996; Frostegård and Bååth 1997; Olsson 1999; Gunina et al. 2014",,
+C18_1w9,C19H36O2,Fungi,,,
+C18_2w6,C19H36O2,Fungi,,,
+X10ME_C17,C18H36O2,Gram positive or Actinobacteria,"zelles(1997, 1999); Zak et al., 1996; Hanajík and  Fritze 2009;
+Zogg et al., 1997; Ringelberg et al., 1997,  Bardgett et al.,1996; Frostegård and Bååth 1997; Findlay and Dobbs (1993); Joergensen 2022; Kroppenstedt et al., 1984; Brennan 1988",,
+X10ME_C18,C19H38O2,Gram positive or Actinobacteria,,,
+C16_1w7,C17H32O2,Gram negative," Zak et al., 1996; Zogg et al., 1997;  Ringelberg et al., 1997; Bardgett et al.,1996; zelles(1997, 1999);  Hanajík and Fritze 2009;  Bardgett et al.,1996; Frostegård and Bååth 1997; Findlay and Dobbs 1993; Taylor and Parks 1983; Joergensen 2022 ",,
+C18_1w7,C19H36O2,Gram negative,,,
+cycC19,C19H38O2,Gram negative,,,
+C17_1w8,C18H34O2,Gram negative,,,
+C19,C19H40O2,Non-specific bacterial marker,"zelles(1997, 1999); Findlay and Dobbs 1993; Buckeridge et al. 2020",,
+C18,C18H38O4,Non-specific bacterial marker,,,
+C20,C20H42O2,Non-specific bacterial marker,,,
+C20_2w6,C20H38O2,Protozoa,Lechavalier and Lechavalier 1988, Vestal and white 1989, Gunina et al. 2014
+C20_3w6,C20H36O2,Protozoa,,,
