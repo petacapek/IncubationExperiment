@@ -1,4 +1,4 @@
-subMFit0<-function(x, Soil, Treatment, IEactive){
+subMFitFerm<-function(x, Soil, Treatment, IEactive){
   #==========================Extracting sampling time from the dataset
   times <- unique(IEactive$Time)
   timesSim <- seq(0, max(times), length.out = 100)
@@ -6,24 +6,28 @@ subMFit0<-function(x, Soil, Treatment, IEactive){
   ##Eu at time zero is a function of initial Cflush, PLFA and respective conversion coefficients
   Gunlab0 = 1e-25
   Bunlab0 = mean(as.numeric(IEactive[IEactive$Time == 0, "Cflush"]), na.rm = T)/x[8]
-  y0 <- c(500, 0, 0, 0, Gunlab0, Bunlab0)
-  
+  y0 <- c(500, 0, 0, 0, Gunlab0, Bunlab0, 0)
+  H0 <- 10^-mean(as.numeric(IEactive[IEactive$Time == 0, "pH"]), na.rm = T)
   #==========================Running simulation
-  Yhat <- subMSolver0(subM0, x, times, y0)
-  Sim <- as.data.frame(subMSolver0(subM0, x, timesSim, y0))
-  colnames(Sim) <- c("Gl", "CO2", "Cflush")
+  Yhat <- subMSolverFerm(subMFerm, x, times, y0)
+  Sim <- as.data.frame(subMSolverFerm(subMFerm, x, timesSim, y0))
+  extraH <- as.numeric(t((IEactive %>% group_by(Time) %>% summarise(mean(ExtraH, na.rm = T)))[,2]))
+  extraHsim <- predict(lc1, newdata = data.frame(Time = timesSim))
+  Yhat[, 4] <- -log10(H0+extraH+(1.75e-5 - sqrt(1.75e-5^2 + 4*1.75e-5*Yhat[, 4]/2))/-2*1e3/(1-0.28)/1e6) #1mol of acetic acid contains 2 mols C so Yhat[, 4]/2
+  Sim[, 4] <- -log10(H0+extraHsim+(1.75e-5 - sqrt(1.75e-5^2 + 4*1.75e-5*Sim[, 4]/2))/-2*1e3/(1-0.28)/1e6) #1mol of acetic acid contains 2 mols C so Yhat[, 4]/2
+  colnames(Sim) <- c("Gl", "CO2", "Cflush", "pH")
   Sim$Time <- timesSim
   Sim$Soil <- Soil
   Sim$Treatment <- Treatment
   #==========================Calculating error that is minimized
   ##Measured data
-  Y <- as.matrix(IEactive %>%  group_by(Time) %>% summarize(Glucose = mean(Glraw, na.rm = T), 
+  Y <- as.matrix(IEactive %>%  group_by(Time) %>% summarize(Glucose = mean(Gl, na.rm = T), 
                                                            CO2 = mean(CumulativeRg, na.rm = T),
-                                                           #kec = mean(kec, na.rm = T),
-                                                           Cflush = mean(CFlushgl, na.rm = T))
+                                                           Cflush = mean(CFlushgl, na.rm = T),
+                                                           pH = mean(pH, na.rm = T))
                                                            #kplfa = mean(kPLFA, na.rm = T),
                                                            #PLFA = mean(PLFAgl, na.rm = T))
-                 )[, -c(1)]
+                 )[, -1]
   ##Weights
   W <- matrix(rep(apply(Y, 2, sd, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
   What <- matrix(rep(apply(Yhat, 2, sd, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
@@ -46,7 +50,7 @@ subMFit0<-function(x, Soil, Treatment, IEactive){
   for(i in 1:dim(Y)[2]){
     R2all <- append(R2all, 1 - (sum((Y[, i] - Yhat[, i])^2, na.rm = T)/sum((Y[, i] - M[, i])^2, na.rm = T)))
   }
-  names(R2all) <- c("Gl", "CO2", "Cflush")
+  names(R2all) <- c("Gl", "CO2", "Cflush", "pH")
   
   errors = c(R2 = R2, R2adj = R2adj, ll = ll, AIC = AIC, Fnorm = Fnorm, n = length(Y), p = length(x))
   

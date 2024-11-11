@@ -8,9 +8,9 @@ def subM0 (y, t, pars):
     Km=pars[1];     
     yA=pars[2];
     Gm=pars[3]; 
-    m=pars[4]; 
-    g=pars[5];
-    #k=pars[6];
+    #m=pars[4]; 
+    g=pars[4];
+    k=pars[5];
     #Scaling function for substrate uptake
     f=Glucose/(Km+Glucose) #labelled substrate only
     
@@ -26,20 +26,20 @@ def subM0 (y, t, pars):
     uptake=Im*B*f #glucose only
     assimilation = Im*yA*f
     mobilization = Im*yA*G/Gm # 
-    growth = max(0, (mobilization - m)/(1 + g))
-    recycling = max(0, -(mobilization - m)) #defines maintenance energy, which needs to be covered from B instead of G
+    growth = mobilization/(1 + g)
+    #recycling = max(0, -(mobilization - m)) #defines maintenance energy, which needs to be covered from B instead of G
     #death = k*B 
     
     #Define derivatives
     ##Labelled pools
     dGlucosedt = -uptake
-    dGlabdt = assimilation - mobilization*Gatm - (growth - recycling)*Glab
-    dBlabdt = B*(growth*Gatm - recycling*Batm)
-    dCO2labdt = uptake*(1 - yA) + B*(growth*g*Gatm + recycling*Batm + (m - recycling)*Gatm)
+    dGlabdt = assimilation - mobilization*Gatm - (growth - k)*Glab
+    dBlabdt = B*(growth*Gatm - k*Batm)
+    dCO2labdt = uptake*(1 - yA) + B*growth*g*Gatm
     ##Unabelled pools
     #dSudt
-    dGunlabdt = - mobilization*(1 - Gatm) - (growth - recycling)*Gunlab
-    dBunlabdt = B*(growth*(1 - Gatm) - recycling*(1 - Gatm))
+    dGunlabdt = - mobilization*(1 - Gatm) - (growth - k)*Gunlab
+    dBunlabdt = B*(growth*(1 - Gatm) - k*(1 - Batm))
     #dClresidualdt = death*X1atm
         
     return dGlucosedt, dGlabdt, dBlabdt, dCO2labdt, dGunlabdt, dBunlabdt;

@@ -1,6 +1,16 @@
 #==============================Libraries
 library(dplyr)
 library(ggplot2)
+library(foreach)
+library(doParallel)
+library(deSolve)
+library(reticulate)
+library(FME)
+library(ABCoptim)
+library(caRamel)
+library(locfit)
+library(nsga2R)
+library(CEoptim)
 #=============================ggplot theme
 theme_min <- readRDS("/mnt/580CBE2464C5F83D/pracovni/helpfull_R_Matlab_script/ggtheme.rds")
 #=============================DATA
@@ -13,14 +23,13 @@ summary(IE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #==================Chemical parameters
 #Glucose concentration
-IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
-  summarise(y = mean(500-Glraw, na.rm = T), ySD = sd(500-Glraw, na.rm = T)) %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Time < 20) %>% 
+  summarise(y = mean(Gl, na.rm = T), ySD = sd(Gl, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  xlab("Time (days)") + ylab(expression(paste("Glucose (", mu, "mol C g ", DW^{-1}, ")"))) +
-  geom_hline(yintercept = 500)
+  xlab("Time (days)") + ylab(expression(paste("Glucose (", mu, "mol C g ", DW^{-1}, ")"))) 
 #pH
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(pH, na.rm = T), ySD = sd(pH, na.rm = T)) %>% 
@@ -29,22 +38,6 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
                                                                      legend.position = c(0.85, 0.85)) +
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("pH")))
-
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Time == 0) %>% 
-  summarise(y = mean(pH, na.rm = T), ySD = sd(pH, na.rm = T))
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Time == 3) %>% 
-  summarise(y = mean(pH, na.rm = T))
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Time == 58) %>% 
-  summarise(y = mean(pH, na.rm = T))
-#Amount of acetic acid in soil to decrease pH in:
-#Certovo - aerobic from 4.3 to 4.04 is
-((10^(-4.04) - 10^(-4.3))^2/1.8e-5)*((40*(1-0.28)/(40*0.28))/1000)*1e6*2 #in umol C/g DW
-#Plesne - aerobic from 4.12 to 4.03 is
-((10^(-4.03) - 10^(-4.12))^2/1.8e-5)*((40*(1-0.28)/(40*0.28))/1000)*1e6*2 #in umol C/g DW
-#Certovo - anaerobic from 4.3 to 3.83 is
-((10^(-3.83) - 10^(-4.3))^2/1.8e-5)*((40*(1-0.28)/(40*0.28))/1000)*1e6*2 #in umol C/g DW
-#Plesne - aerobic from 4.12 to 3.70 is
-((10^(-3.70) - 10^(-4.12))^2/1.8e-5)*((40*(1-0.28)/(40*0.28))/1000)*1e6*2 #in umol C/g DW
 
 #Respiration rate
 IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
@@ -99,7 +92,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("DON in water (", mu, "mol N g ", DW^{-1}, ")")))
 #NH4w
-IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(NH4w, na.rm = T), ySD = sd(NH4w, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -115,7 +108,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(NO[3], " in water (", mu, "mol N g ", DW^{-1}, ")")))
 #DOPw
-IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(DOPw, na.rm = T), ySD = sd(DOPw, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -123,7 +116,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(DOP, " in water (", mu, "mol P g ", DW^{-1}, ")")))
 #SRPw
-IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(PO4w, na.rm = T), ySD = sd(PO4w, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -131,7 +124,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(SRP, " in water (", mu, "mol P g ", DW^{-1}, ")")))
 #Al
-IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(Al, na.rm = T), ySD = sd(Al, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -139,7 +132,7 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(Al, " in water (", mu, "mol Al g ", DW^{-1}, ")")))
 #Fe
-IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
   summarise(y = mean(Fe, na.rm = T), ySD = sd(Fe, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -269,70 +262,12 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(K[i], " of P (", mu, "mol MUB-C g ", DW^{-1}, ")")))
 
-ggplot(IE, aes(PO4w, VmaxP)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment)) + theme_min
-
-#===========Inhibition of enzyme activity by changing product concentration due to microbial uptake===========#
-#=====================Script that calculate product concentration is uploaded=============================#
-source("/mnt/580CBE2464C5F83D/pracovni/data_statistika/Junior/Inkubace/aerobni/Enzymes_raw/ECalculatorJunior.R")
-#==========================================Additional libraries===============================================#
-library(openxlsx)
-library(reshape2)
-library(bbmle)
-library(FME)
-library(ABCoptim)
-library(foreach)
-library(doParallel)
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#===========================Test for phosphatase activity and samples on M1 plate
-#==============M1 - sample IDs 2, 4, 9, 10 , 11, 12, 25, 32, 33, 34, 35, 37, 38, 39, 40, 41
-Samples=rbind(c(2,4,9,10), c(11,12,25,32), c(33, 34,35,37), c(38:41))
-DW=cbind(c(0.28, 0.29,0.3,0.28), rep(0.28, 4), rep(0.28, 4), rep(0.28, 4))
-rownames(DW)<-c("A", "B", "C", "D")
-#=====Calculation
-M1<-ECalculatorJunior(dataset = "/mnt/580CBE2464C5F83D/pracovni/data_statistika/Junior/Inkubace/aerobni/Enzymes_raw/MUF M1.xlsx", #zdrojovy soubor
-                      Kalibracni = c(1,5,10), 
-                      Substraty = c(224/20, 224/2, 224),
-                      Nmeasure = 37, empty = 1,
-                      Samples = Samples,
-                      DW = DW)
-#=====Data
-M1d<-M1$data
-#=====Quick vizualization
-ggplot(subset(M1d, Enzyme=="Phosph"), aes(Time, Pcorr2)) + geom_point(cex=6, aes(color=ConcEnzyme2)) +
-  facet_wrap(.~Sample, scales="free") + xlab("Time (h)")
-
-#=====Specifying initial concentration of product (Pcorr2 at t = 0) and substrate (ConcEnz2 - Pcorr2 at t = 0)
-M1d$P0<-NA
-M1d$S0<-NA
-for(i in unique(M1d$Sample)){
-  for(n in unique(M1d$ConcEnzyme2)){
-    M1d[(M1d$Sample == i & M1d$ConcEnzyme2 == n), "P0"] <- 
-      M1d[(M1d$Sample == i & M1d$ConcEnzyme2 == n & M1d$Time == 0), "Pcorr2"]
-    M1d[(M1d$Sample == i & M1d$ConcEnzyme2 == n), "S0"] <- 
-      M1d[(M1d$Sample == i & M1d$ConcEnzyme2 == n & M1d$Time == 0), "ConcEnzyme2"] - M1d[(M1d$Sample == i & M1d$ConcEnzyme2 == n & M1d$Time == 0), "Pcorr2"]
-  }
-}
-
-Phosph <- subset(M1d, Enzyme == "Phosph")
-#Add measured concentration of SRP in water extract and test kinetic equations' fit again
-names(Phosph)
-
-Phosph$P0all <- numeric(length = nrow(Phosph))
-for(i in unique(Phosph$Sample)){
-  Phosph[Phosph$Sample == i, "P0all"] <- Phosph[Phosph$Sample == i, "P0"] + IE[(IE$Treatment == "Aerobic" & IE$Time != 0.17 & IE$Time != 0.19 & IE$Time != 4), "PO4w"][i]
-}
-
-ggplot(Phosph, aes(Sample, P0)) + geom_point(cex = 6) + geom_point(cex = 6, color = "red", aes(Sample, P0all))
-
-WI2 <- nls(Time ~ -(Km*log((S0 - Pcorr2)/S0) - Pcorr2)/Vmax, data = Phosph, subset = Sample == 2, start = list(Vmax = 1, Km = 10))
-summary(WI2)
-CI2 <- nls(Time ~ -(Km*(S0/Ki + P0/Ki + 1)*))
 #==================Biological parameters
 #Cflush
 IE$CflushOut <- c("False")
 IE[(IE$Soil == "Plesne" & IE$Treatment == "Aerobic" & IE$Time == 2), "CflushOut"] <- c("True")
 
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(CflushOut == "False") %>% 
   summarise(y = mean(Cflush, na.rm = T), ySD = sd(Cflush, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
@@ -419,81 +354,90 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
                                                                      legend.position = c(0.85, 0.85)) +
   facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste(" ")))
+#CLC to ATP
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(ATP/Cflush, na.rm = T), ySD = sd(Cflush/DNA, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste(" ")))
 #====================================Functional groups
-#Gram+
-PLFAIdent <- read.csv("MicrobialGroupsPLFAIdentities.csv")
-PLFAIdent[PLFAIdent$Group == "Gram positive", "PLFA"]
-GplusCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Gram positive", "PLFA"])){
-  GplusCols <- append(GplusCols, which(names(IE) == PLFAIdent[PLFAIdent$Group == "Gram positive", "PLFA"][i]))
-}
-
-GplusCols <- GplusCols
-IE$GPlus <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$GPlus[i] <- sum(IE[i, GplusCols], na.rm = T)
-}
-
-#Gram-
-GminusCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Gram negative", "PLFA"])){
-  GminusCols <- append(GminusCols, which(names(IE) == PLFAIdent[PLFAIdent$Group == "Gram negative", "PLFA"][i]))
-}
-
-IE$GMinus <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$GMinus[i] <- sum(IE[i, GminusCols], na.rm = T)
-}
-
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(C20_3w6/PLFA*100, na.rm = T), ySD = sd(C20_3w6/PLFA*100, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste(" ")))
+#==================================We will only define bacteria and fungi
+#Bacteria
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(DNAb, na.rm = T), ySD = sd(DNAb, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Bacterial genes (", 10^{9}, " copies ", mu, "mol C-DNA)")))
 #Fungi
-FunCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Fungi", "PLFA"])){
-  FunCols <- append(FunCols, which(names(IE) == PLFAIdent[PLFAIdent$Group == "Fungi", "PLFA"][i]))
-}
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(DNAf, na.rm = T), ySD = sd(DNAf, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Fungal genes (", 10^{9}, " copies ", mu, "mol C-DNA)")))
 
-IE$Fun <- numeric(length = nrow(IE))
+#Fungi to bacteria ratio
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(DNAf/DNAb, na.rm = T), ySD = sd(DNAf/DNAb, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Fungi to bacteria ratio (unitless)")))
+#=============================PLFA
+#certainly fungal PLFA is 18_2w6
+IE$PLFAf <- IE$C18_2w6
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(PLFAf, na.rm = T), ySD = sd(PLFAf, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Fungal PLFA (", mu, "mol(C)", g(DW)^{-1}, ")")))
 
-for(i in 1:nrow(IE)){
-  IE$Fun[i] <- sum(IE[i, FunCols], na.rm = T)
-}
+#Bacterial PLFA are selected according to Frostegard and Baath (1996) so the derived conversion factors can be used
+##those are C15, iC15, aC15, iC16, iC17, aC17, C16_1w7, C18_1w7, and cyc19 (C17, cyc17 and C16_1w9 are missing)
+IE$PLFAb <- with(IE, C15+iC15+aC15+iC17+aC17+C16_1w7+C18_1w7+cycC19)
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(PLFAb, na.rm = T), ySD = sd(PLFAb, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Bacterial PLFA (", mu, "mol(C)", g(DW)^{-1}, ")")))
 
-#Protozoa
-ProCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Protozoa", "PLFA"])){
-  ProCols <- append(ProCols, which(names(IE) == PLFAIdent[PLFAIdent$Group == "Protozoa", "PLFA"][i]))
-}
+#Fungi to bacteria ratio - PLFA based
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(PLFAf/PLFAb, na.rm = T), ySD = sd(PLFAf/PLFAb, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Fungi to bacteria ratio (unitless)")))
 
-IE$Prot <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$Prot[i] <- sum(IE[i, ProCols], na.rm = T)
-}
-
-#Actinobacteria
-ActCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Gram positive or Actinobacteria", "PLFA"])){
-  ActCols <- append(ActCols, which(names(IE) == PLFAIdent[PLFAIdent$Group == "Gram positive or Actinobacteria", "PLFA"][i]))
-}
-
-IE$Act <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$Act[i] <- sum(IE[i, ActCols], na.rm = T)
-}
-
-#Non-Specific
-NSCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Non-specific bacterial marker", "PLFA"])){
-  NSCols <- append(NSCols, which(names(IE) == PLFAIdent[PLFAIdent$Group == "Non-specific bacterial marker", "PLFA"][i]))
-}
-
-IE$NS <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$NS[i] <- sum(IE[i, NSCols], na.rm = T)
-}
+#Comparing DNA a PLFA based fungi to bacteria ratio
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(PLFAf/PLFAb, na.rm = T), ySD = sd(PLFAf/PLFAb, na.rm = T),
+            y2 = mean(DNAf/DNAb, na.rm = T), ySD2 = sd(PLFAf/PLFAb, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  geom_point(cex = 6, pch = 21, col = "red", aes(Time, y2)) + 
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  geom_errorbar(aes(ymin = y2 - ySD2, ymax = y2 + ySD2), col = "red") + 
+  xlab("Time (days)") + ylab(expression(paste("Fungi to bacteria ratio (unitless)")))
 
 #======================Isotopes
 #delta 13C of CO2
@@ -727,6 +671,62 @@ ggplot(IE, aes(Cpotassgl, Gl)) + geom_point(cex = 6, pch = 21) + theme_min +
   ylab(expression(paste("Glucose-C (", mu, "mol C ",g~(DW)^{-1}, ")" ))) + geom_abline(intercept = 0, slope = 1) +
   facet_grid(Treatment~Soil)
 
+#delta 13C of water extract
+IE$DOCwAtm <- (IE$delta13DOCw/1000 + 1)*0.0111802
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(CpotassAtm, na.rm = T), ySD = sd(DOCwAtm, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste({}^{13},C, " in  DOC (at%)")))
+
+#Glucose C in water extract in umol C/g DW
+IE$DOCwgl <- numeric(length = nrow(IE))
+
+for(i in 1:nrow(IE)){
+  if(IE$Soil[i] == "Plesne" & IE$Treatment[i] == "Aerobic"){
+    IE$DOCwgl[i] <- (IE$DOCwAtm[i] - mean(IE[(IE$Soil == "Plesne" & IE$Treatment == "Aerobic" & IE$Time == 0), "DOCwAtm"]))/
+      (IE$at13Gl[i] - mean(IE[(IE$Soil == "Plesne" & IE$Treatment == "Aerobic" & IE$Time == 0), "DOCwAtm"]))*IE$DOCw[i]
+  }else{
+    if(IE$Soil[i] == "Plesne" & IE$Treatment[i] == "Anaerobic"){
+      IE$DOCwgl[i] <- (IE$DOCwAtm[i] - mean(IE[(IE$Soil == "Plesne" & IE$Treatment == "Anaerobic" & IE$Time == 0), "DOCwAtm"]))/
+        (IE$at13Gl[i] - mean(IE[(IE$Soil == "Plesne" & IE$Treatment == "Anaerobic" & IE$Time == 0), "DOCwAtm"]))*IE$DOCw[i]
+    }else{
+      if(IE$Soil[i] == "Certovo" & IE$Treatment[i] == "Anaerobic"){
+        IE$DOCwgl[i] <- (IE$DOCwAtm[i] - mean(IE[(IE$Soil == "Certovo" & IE$Treatment == "Anaerobic" & IE$Time == 0), "DOCwAtm"]))/
+          (IE$at13Gl[i] - mean(IE[(IE$Soil == "Certovo" & IE$Treatment == "Anaerobic" & IE$Time == 0), "DOCwAtm"]))*IE$DOCw[i]
+      }else{
+        IE$DOCwgl[i] <- (IE$DOCwAtm[i] - mean(IE[(IE$Soil == "Certovo" & IE$Treatment == "Aerobic" & IE$Time == 0), "DOCwAtm"]))/
+          (IE$at13Gl[i] - mean(IE[(IE$Soil == "Certovo" & IE$Treatment == "Aerobic" & IE$Time == 0), "DOCwAtm"]))*IE$DOCw[i]
+      }
+    }
+  }
+}
+IE[IE$Time == 0, "DOCwgl"] <- 0
+
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(DOCwgl, na.rm = T), ySD = sd(DOCwgl, na.rm = T),
+            y2 = mean(DOCw, na.rm = T), y2SD = sd(DOCw, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  geom_point(cex = 6, pch = 21, fill = "red", aes(x = Time, y = y2), alpha = 0.5) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), col = "red") +
+  xlab("Time (days)") + ylab(expression(paste("Glucose-C in DOC (", mu, "mol C ",g~(DW)^{-1}, ")" )))
+
+#Glucose concentration vs glucose content of K2SO4 extract
+ggplot(IE, aes(Cpotassgl, Gl)) + geom_point(cex = 6, pch = 21) + theme_min +
+  xlab(expression(paste("Glucose-C in ",EC-K[2],SO[4], " (", mu, "mol C ",g~(DW)^{-1}, ")" ))) +
+  ylab(expression(paste("Glucose-C (", mu, "mol C ",g~(DW)^{-1}, ")" ))) + geom_abline(intercept = 0, slope = 1) +
+  facet_grid(Treatment~Soil)
+
+#Glucose concentration vs glucose content of DOC extract
+ggplot(IE, aes(DOCwgl, Glraw)) + geom_point(cex = 6, pch = 21) + theme_min +
+  xlab(expression(paste("Glucose-C in DOC (", mu, "mol C ",g~(DW)^{-1}, ")" ))) +
+  ylab(expression(paste("Glucose-C (", mu, "mol C ",g~(DW)^{-1}, ")" ))) + geom_abline(intercept = 0, slope = 1) +
+  facet_grid(Treatment~Soil)
+
 #Glucose C in Cflush extract in umol C/g DW
 IE$CFlushgl <- numeric(length = nrow(IE))
 for(i in 1:nrow(IE)){
@@ -762,20 +762,20 @@ IE %>% group_by(Time, Treatment, Soil) %>% #filter(Treatment == "Aerobic") %>%
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(CflushOut == "False") %>% 
   summarise(y = mean(CFlushgl, na.rm = T), ySD = sd(CFlushgl, na.rm = T),
             y2 = mean(Cflush, na.rm = T), y2SD = sd(Cflush, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
+  geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
   #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
   #geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
   xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 
 #Comparing glucose in Cflush with residual glucose C (everything that was not respired)
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(CflushOut == "False") %>% 
   summarise(y = mean(CFlushgl, na.rm = T), ySD = sd(CFlushgl, na.rm = T),
             y2 = mean((Gl0 - Gl - CumulativeRg), na.rm = T), y2SD = sd((Gl0 - Gl - CumulativeRg), na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
@@ -785,28 +785,15 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>%
   #geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
   xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 
-#===========================kec calculation
-IE$kec <- with(IE, CFlushgl/(Gl0 - Gl - CumulativeRg))
-IE$kec <- ifelse(IE$kec <= 0, NA, IE$kec)
-IE$kec <- ifelse(IE$kec >= 1, NA, IE$kec)
-
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False" & Treatment == "Aerobic") %>% 
-  summarise(y = mean(kec, na.rm = T), ySD = sd(kec, na.rm = T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
-  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
-                                                                     legend.position = c(0.85, 0.85)) +
-  facet_wrap(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  xlab("Time (days)") + ylab("kec factor")
-
 #Glucose C in PLFAs in umol C/g DW
-NC <- names(IE)[52:75]
+NC <- names(IE)[59:82]
 for(i in 1:length(NC)){NC[i] <- paste0(NC[i], "gl")}
 NCframe <- as.data.frame(matrix(nrow = nrow(IE), ncol = length(NC)))
 colnames(NCframe) <- NC
 IE <- cbind(IE, NCframe)
 
-NC2 <- names(IE)[52:75]
-NC3 <- names(IE)[77:100]
+NC2 <- names(IE)[59:82]
+NC3 <- names(IE)[84:107]
 
 NCall <- data.frame(NC, NC2, NC3)
 
@@ -840,103 +827,13 @@ for(i in NC){
 #Total PLFA
 IE$PLFAgl <- numeric(length = nrow(IE))
 for(i in 1:nrow(IE)){
-  IE$PLFAgl[i] <- sum(IE[i, c(112:135)], na.rm = T)
+  IE$PLFAgl[i] <- sum(IE[i, c(121:144)], na.rm = T)
 }
 
 IE[(IE$PLFAgl == 0 & IE$Time > 0), "PLFAgl"] <- NA
-#Gram+
-PLFAIdent <- read.csv("MicrobialGroupsPLFAIdentities.csv")
-PLFAIdent[PLFAIdent$Group == "Gram positive", "PLFA"]
-GplusCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Gram positive", "PLFA"])){
-  GplusCols <- append(GplusCols, which(names(IE[, 112:135]) == paste0(PLFAIdent[PLFAIdent$Group == "Gram positive", "PLFA"][i], "gl")))
-}
-
-GplusCols <- GplusCols+111
-IE$GPlusgl <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$GPlusgl[i] <- sum(IE[i, GplusCols], na.rm = T)
-}
-
-IE[(IE$GPlusgl == 0 & IE$Time >0), "GPlusgl"] <- NA
-
-#Gram-
-GminusCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Gram negative", "PLFA"])){
-  GminusCols <- append(GminusCols, which(names(IE[, 112:135]) == paste0(PLFAIdent[PLFAIdent$Group == "Gram negative", "PLFA"][i], "gl")))
-}
-
-GminusCols <- GminusCols+111
-IE$GMinusgl <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$GMinusgl[i] <- sum(IE[i, GminusCols], na.rm = T)
-}
-
-IE[(IE$GMinusgl == 0 & IE$Time >0), "GMinusgl"] <- NA
-
-#Fungi
-FunCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Fungi", "PLFA"])){
-  FunCols <- append(FunCols, which(names(IE[, 112:135]) == paste0(PLFAIdent[PLFAIdent$Group == "Fungi", "PLFA"][i], "gl")))
-}
-
-FunCols <- FunCols+111
-IE$Fungl <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$Fungl[i] <- sum(IE[i, FunCols], na.rm = T)
-}
-
-IE[(IE$Fungl == 0 & IE$Time >0), "Fungl"] <- NA
-
-#Protozoa
-ProCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Protozoa", "PLFA"])){
-  ProCols <- append(ProCols, which(names(IE[, 112:135]) == paste0(PLFAIdent[PLFAIdent$Group == "Protozoa", "PLFA"][i], "gl")))
-}
-
-ProCols <- ProCols+111
-IE$Protgl <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$Protgl[i] <- sum(IE[i, ProCols], na.rm = T)
-}
-
-IE[(IE$Protgl == 0 & IE$Time >0), "Protgl"] <- NA
-
-#Actinobacteria
-ActCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Gram positive or Actinobacteria", "PLFA"])){
-  ActCols <- append(ActCols, which(names(IE[, 112:135]) == paste0(PLFAIdent[PLFAIdent$Group == "Gram positive or Actinobacteria", "PLFA"][i], "gl")))
-}
-
-ActCols <- ActCols+111
-IE$Actgl <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$Actgl[i] <- sum(IE[i, ActCols], na.rm = T)
-}
-
-IE[(IE$Actgl == 0 & IE$Time >0), "Actgl"] <- NA
-
-#Non-Specific
-NSCols <- numeric()
-for(i in 1:length(PLFAIdent[PLFAIdent$Group == "Non-specific bacterial marker", "PLFA"])){
-  NSCols <- append(NSCols, which(names(IE[, 112:135]) == paste0(PLFAIdent[PLFAIdent$Group == "Non-specific bacterial marker", "PLFA"][i], "gl")))
-}
-
-NSCols <- NSCols+111
-IE$NSgl <- numeric(length = nrow(IE))
-
-for(i in 1:nrow(IE)){
-  IE$NSgl[i] <- sum(IE[i, NSCols], na.rm = T)
-}
-
-IE[(IE$NSgl == 0 & IE$Time >0), "NSgl"] <- NA
+summary(IE$PLFAgl)
 #===================Total PLFA
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% #filter(CflushOut == "False") %>% 
   summarise(y2 = mean(CFlushgl, na.rm = T), y2SD = sd(CFlushgl, na.rm = T),
             y = mean(PLFAgl, na.rm = T), ySD = sd(PLFAgl, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
@@ -948,249 +845,791 @@ IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>%
   #geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
   xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 
-View(IE %>% group_by(Time, Treatment, Soil) %>% filter(Soil == "Plesne" & Treatment == "Anaerobic") %>% 
-       summarise(y = mean(PLFAgl, na.rm = T), ySD = sd(PLFAgl, na.rm = T)))
-print(IE[(IE$Soil == "Plesne" & IE$Treatment == "Anaerobic" & IE$Time == 3), "PLFAgl"])
-which(IE$PLFAgl == (IE[(IE$Soil == "Plesne" & IE$Treatment == "Anaerobic" & IE$Time == 3), "PLFAgl"])[1])
-IE$PLFAgl[169] <- NA
-IE$NSgl[169] <- NA
-print(IE[(IE$Soil == "Plesne" & IE$Treatment == "Anaerobic" & IE$Time == 35), "PLFAgl"])
-which(IE$PLFAgl == (IE[(IE$Soil == "Plesne" & IE$Treatment == "Anaerobic" & IE$Time == 35), "PLFAgl"])[3])
-IE$PLFAgl[243] <- NA
-IE$Fungl[243] <- NA
-#======================G+ bacteria
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
-  summarise(y = mean(GPlusgl, na.rm = T), ySD = sd(GPlusgl, na.rm = T),
-            y2 = mean(PLFAgl, na.rm = T), y2SD = sd(PLFAgl, na.rm = T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
-  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
-                                                                     legend.position = c(0.85, 0.85)) +
-  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
-  #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
-  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
-  xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
-#======================G- bacteria
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
-  summarise(y = mean(GMinusgl, na.rm = T), ySD = sd(GMinusgl, na.rm = T),
-            y2 = mean(PLFAgl, na.rm = T), y2SD = sd(PLFAgl, na.rm = T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
-  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
-                                                                     legend.position = c(0.85, 0.85)) +
-  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
-  #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
-  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
-  xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
+#Fungi
+IE$Fungl <- IE$C18_2w6gl
+#Bacteria
+IE$Bacgl <- with(IE, C15gl+iC15gl+aC15gl+iC17gl+aC17gl+C16_1w7gl+C18_1w7gl+cycC19gl)
 #======================Fungi
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
-  summarise(y = mean(Fungl, na.rm = T), ySD = sd(Fungl, na.rm = T),
-            y2 = mean(PLFAgl, na.rm = T), y2SD = sd(PLFAgl, na.rm = T)) %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(Fungl, na.rm = T), ySD = sd(Fungl, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
-  #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
-  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
+  xlab("Time (days)") + ylab(expression(paste("Glucose-C in fungal PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
+#removing outliers
+IE$FunglAll <- IE$Fungl
+IE[(IE$FunglAll > 0.45 & IE$Treatment == "Aerobic" & IE$Soil == "Certovo" & !is.na(IE$FunglAll)), "Fungl"] <- NA
+#======================Bacteria
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(Bacgl, na.rm = T), ySD = sd(Bacgl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Glucose-C in bacterial PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
+#removing outliers
+IE$BacglAll <- IE$Bacgl
+IE[(IE$BacglAll > 0.18 & IE$Treatment == "Aerobic" & IE$Soil == "Certovo" & !is.na(IE$BacglAll)), "Bacgl"] <- NA
+IE[(IE$BacglAll == max(IE[(IE$Treatment == "Aerobic" & IE$Soil == "Plesne" & IE$Time == 14), "Bacgl"]) & !is.na(IE$BacglAll)), "Bacgl"] <- NA
+#======================Relative abundance of fungal and bacterial PLFA
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean((Fungl+Bacgl)/PLFAgl, na.rm = T), ySD = sd((Fungl+Bacgl)/PLFAgl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 #======================Actinobacteria
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
-  summarise(y = mean(Actgl, na.rm = T), ySD = sd(Actgl, na.rm = T),
-            y2 = mean(PLFAgl, na.rm = T), y2SD = sd(PLFAgl, na.rm = T)) %>% 
+IE$Actgl <- with(IE, C18_1w9gl)
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(Actgl/PLFAgl, na.rm = T), ySD = sd(PLFAgl, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
-  #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
-  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
-  xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
-#======================Non-specific
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
-  summarise(y = mean(NSgl, na.rm = T), ySD = sd(NSgl, na.rm = T),
-            y2 = mean(PLFAgl, na.rm = T), y2SD = sd(PLFAgl, na.rm = T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
-  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
-                                                                     legend.position = c(0.85, 0.85)) +
-  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
-  #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
-  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
-  xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
-#======================Protozoa
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
-  summarise(y = mean(Protgl, na.rm = T), ySD = sd(Protgl, na.rm = T),
-            y2 = mean(PLFAgl, na.rm = T), y2SD = sd(PLFAgl, na.rm = T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
-  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
-                                                                     legend.position = c(0.85, 0.85)) +
-  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
-  #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
-  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
-  xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
+  xlab("Time (days)") + ylab(expression(paste("Glucose-C in actinobacterial PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
 
-#======================Bac vs Fungi
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
-  summarise(y = mean(Fungl/(GPlusgl + GMinusgl + NSgl + Actgl), na.rm = T), 
-            ySD = sd(Fungl/(GPlusgl + GMinusgl + NSgl + Actgl), na.rm = T),
-            y2 = mean(Fun/(GPlus + GMinus + NS + Act), na.rm = T), 
-            y2SD = sd(Fun/(GPlus + GMinus + NS + Act), na.rm = T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
-  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
-                                                                     legend.position = c(0.85, 0.85)) +
-  facet_wrap(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
-  #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
-  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
-  xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
+#================pH sensitivity
+pHbac <- read.csv2("pHbacteria.csv", header = F, sep = ";", col.names = c("pH", "growth"))
+pHbac$group <- "Bacteria"
+pHbac$growth <- pHbac$growth*24/1000/6
 
-#======================G+ vs G-
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
-  summarise(y = mean(GPlusgl/GMinusgl, na.rm = T), 
-            ySD = sd(GPlusgl/GMinusgl, na.rm = T),
-            y2 = mean(GPlus/GMinus, na.rm = T), 
-            y2SD = sd(GPlus/GMinus, na.rm = T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
-  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
-                                                                     legend.position = c(0.85, 0.85)) +
-  facet_wrap(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(cex = 6, pch = 21, fill = "green", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "green") +
-  #geom_point(cex = 6, pch = 21, fill = "blue", alpha = 0.5, aes(x = Time, y = y3)) + geom_errorbar(aes(ymin = y3 - y3SD, ymax = y3 + y3SD), color = "blue") +
-  geom_point(cex = 6, pch = 21, fill = "red", alpha = 0.5, aes(x = Time, y = y2)) + geom_errorbar(aes(ymin = y2 - y2SD, ymax = y2 + y2SD), color = "red") +
-  xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" )))
+summary(lm(growth~pH, pHbac))
+coef(lm(growth~pH, pHbac))[2]/1.6
 
-#===========================kPLFA calculation
-IE$kPLFA <- with(IE, PLFAgl/(Gl0 - Gl - CumulativeRg))
-IE$kPLFA <- ifelse(IE$kPLFA <= 0, NA, IE$kPLFA)
-IE$kPLFA <- ifelse(IE$kPLFA >= 1, NA, IE$kPLFA)
+phfun<- read.csv2("pHfungi.csv", header = F, sep = ";", col.names = c("pH", "growth"))
+phfun$group <- "Fungi"
+phfun$growth <- phfun$growth*24/1000/2
 
-IE %>% group_by(Time, Treatment, Soil) %>% filter(CflushOut == "False") %>% 
-  summarise(y = mean(kPLFA, na.rm = T), ySD = sd(kPLFA, na.rm = T),
-            y2 = mean(kec, na.rm = T), y2SD = sd(kec, na.rm = T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
-  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
-                                                                     legend.position = c(0.85, 0.85)) +
-  facet_wrap(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  #geom_point(aes(x = Time, y = y2), cex = 6, pch = 21, fill = "red", alpha = 0.5, show.legend = F) +
-  xlab("Time (days)") + ylab("kplfa factor")
+summary(lm(growth~pH, phfun))
+coef(lm(growth~pH, phfun))[2]/1.6
 
+phall <- rbind(pHbac, phfun)
+
+ggplot(phall, aes(pH, growth)) + geom_point(cex = 6, pch = 21, aes(fill = group)) +
+  theme_min + stat_smooth(method = lm, aes(color = group))
+
+#Anderson and Domsch 1986, Anderson and Grey 1990 - substrate inhibition
+AD <- data.frame(U = c(23.92/968, 30.63/968, 33.16/968, 32.53/968, 38.73/968, 40.51/968, 28.48/968),
+                 S0 = c(90.8/12.01, 181.7/12.01, 254.3/12.01, 363.3/12.01, 726.6/12.01, 1453.3/12.01, 2179.9/12.01),
+                 Legend = rep("Phaozem", 7))
+
+AG <- read.csv("AndersonGrey1990.csv")
+
+AD <- rbind(AD, AG)
+
+ggplot(AD[AD$U < 0.15, ], aes(S0, U)) + geom_point(cex = 6, pch = 21, aes(fill = Legend)) + theme_min #+
+  stat_function(fun = function(x){coef(SI_AD)[1]*x/(coef(SI_AD)[2] + x + x^2/coef(SI_AD)[3])})
+
+SI_AD1 <- nls(U ~ Vmax*S0/(Km + S0 + S0^2/Ki), data = AD, start = list(Vmax = 0.1, Km = 50, Ki = 70),
+              subset = Legend == "Phaozem")
+summary(SI_AD1)
+SI_AD2 <- nls(U ~ Vmax*S0/(Km + S0 + S0^2/Ki), data = AD, start = list(Vmax = 0.1, Km = 50, Ki = 70),
+              subset = Legend == "Monoculture")
+summary(SI_AD2)
+SI_AD3 <- nls(U ~ Vmax*S0/(Km + S0 + S0^2/Ki), data = AD, start = list(Vmax = 0.1, Km = 50, Ki = 70),
+              subset = Legend == "Rotation")
+summary(SI_AD3)
+
+SI_AD <- nls(U ~ Vmax*S0/(Km + S0 + S0^2/Ki), data = AD, start = list(Vmax = 0.1, Km = 50, Ki = 70))
+summary(SI_AD)
 #==============================================SubMicrobial model==============================================
-library(deSolve)
-library(reticulate)
-library(FME)
-library(ABCoptim)
-library(caRamel)
-#============================Basic model without death and explicit PLFA======================================#
+#================================================Basic model==================================================#
 #===================Basic model and respective solver
 source_python("Python/subM0.py")
 source_python("Python/subMSolver0.py")
 #===================================================
 #Objective function and initial parameter guess
 source("Python/subMObjective0.R")
-p0 <- c(6.5, 221, 0.95, 3, 4e-4, 2, 0.41, 0.24)#, 0.05
+p0 <- c(6.5, 221, 0.95, 3, 2, 4e-4, 0.41, 0.24)#, 0.05
 pl <- c(0.01, 0.1, 0.1, 0.5, 1e-7, 1e-7, 0.3, 0.04)#, 0.003
-pu <- c(20, 400, 1, 25, 1e-2, 5, 1, 0.6)#, 0.1
-#==================================================Plesne - aerobic conditions
-IEactive <- subset(IE, Treatment == "Aerobic" & Soil == "Plesne")
+pu <- c(20, 400, 1, 25, 5, 1e-2, 1, 0.6)#, 0.1
+#==================================================Certovo - aerobic conditions
 #==================================================#
 #~~~~~~~~~~~~~Parameters estimation~~~~~~~~~~~~~~~~#
 #==================================================#
 ##First guess by MCMC 
-PAguess <- modMCMC(subMObjective0, p = p0, lower = pl, upper = pu, niter = 30000)
-summary(PAguess)
+CAguess <- modMCMC(subMObjective0, p = p0, lower = pl, upper = pu, niter = 30000, 
+                   IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"))
+summary(CAguess)
 
 #Estimate
-PAOpt <- abc_optim(fn = subMObjective0,
-                   par = as.numeric(apply(PAguess$pars, 2, quantile, 0.5)), 
-                   lb = as.numeric(apply(PAguess$pars, 2, quantile, 0.05)), 
-                   ub = as.numeric(apply(PAguess$pars, 2, quantile, 0.95)))
-PAOpt[6]
-round(PAOpt$par, 3)
+CAOpt <- abc_optim(fn = subMObjective0,
+                   par = as.numeric(apply(CAguess$pars, 2, quantile, 0.5)), 
+                   lb = as.numeric(apply(CAguess$pars, 2, quantile, 0.05)), 
+                   ub = as.numeric(apply(CAguess$pars, 2, quantile, 0.95)), 
+                   IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"))
+round(CAOpt$par, 6)
 #=============================================Model fit
 source("Python/subMFit0.R")
-PAout <- subMFit0(PAOpt$par, "Plesne", "Aerobic")
-PAout$errors
-PAout$R2all
+CAout <- subMFit0(CAOpt$par, "Certovo", "Aerobic", 
+                  IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"))
+CAout$errors
+CAout$R2all
 
 #Glucose concentration
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
   summarise(y = mean(Gl, na.rm = T), ySD = sd(Gl, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("Glucose (", mu, "mol C g ", DW^{-1}, ")"))) +
-  geom_line(data = PAout$Simulation, aes(x = Time, y = Gl))
+  geom_line(data = CAout$Simulation, aes(x = Time, y = Gl))
 #Cumulative respiration from glucose
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne") %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
   summarise(y = mean(CumulativeRg, na.rm = T), ySD = sd(CumulativeRg, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("Cumulative ", CO[2]^{"Glucose"}, " production (", mu, "mol C ", g~(DW)^{-1}, ")"))) +
-  geom_line(data = PAout$Simulation, aes(x = Time, y = CO2))
-#kec
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne") %>% 
-  summarise(y = mean(kec, na.rm = T), ySD = sd(kec, na.rm = T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
-  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
-                                                                     legend.position = c(0.85, 0.85)) +
-  facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  xlab("Time (days)") + ylab(expression(paste(italic(k[ec])))) +
-  geom_line(data = PAout$Simulation, aes(x = Time, y = kec))
+  geom_line(data = CAout$Simulation, aes(x = Time, y = CO2))
 #Chloroform flush
-IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne" & CFlushgl < 100) %>% 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo" & CFlushgl < 100) %>% 
   summarise(y = mean(CFlushgl, na.rm = T), ySD = sd(CFlushgl, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
   xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" ))) +
-  geom_line(data = PAout$Simulation, aes(x = Time, y = Cflush))
-#kplfa
+  geom_line(data = CAout$Simulation, aes(x = Time, y = Cflush))
+
+#===============================Fermentation products
+##===================Certovo 
+#1. Using CLC, CO2, glucose and pH (i.e. function of acetic acid production)
+#pH change due to CO2 dissolution
+IE$ExtraH <- with(IE, 10^-6.4187*(0.04554*96*pCO2/1e6*9.87e-3)/(10^-pH + 10^-6.4187))
+for(i in c("Plesne", "Certovo")){
+  for(n in c("Aerobic", "Anaerobic")){
+    IE[(IE$Soil == i & IE$Treatment == n), "ExtraH"] <- IE[(IE$Soil == i & IE$Treatment == n), "ExtraH"] - 
+      mean(as.numeric(IE[(IE$Soil == i & IE$Treatment == n & IE$Time == 0), "ExtraH"]), na.rm = T)
+  }
+}
+
 IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
-  summarise(y = mean(kPLFA, na.rm = T), ySD = sd(kPLFA, na.rm = T)) %>% 
+  summarise(y = mean(pH, na.rm = T), ySD = sd(pH, na.rm = T),
+            ExtraH = mean(ExtraH, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  xlab("Time (days)") + ylab(expression(paste(italic(k[PLFA])))) +
-  geom_line(data = PAout$Simulation, aes(x = Time, y = kPLFA))
+  xlab("Time (days)") + ylab("pH") +
+  geom_point(aes(x = Time, y = -log10(10^-4.3+ExtraH)), color = "green")
+
+#Spline model to fill out extra H+ from CO2 dissolution into simulation
+lc1 <- locfit(ExtraH ~ lp(Time, nn = 0.1), data = subset(IE, Soil == "Certovo" & Treatment == "Aerobic"))
+summary(lc1)
+lc2 <- locfit(pH ~ lp(Time, nn = 0.1), data = subset(IE, Soil == "Certovo" & Treatment == "Aerobic"))
+summary(lc2)
+#===================Basic model and respective solver
+source_python("Python/subMFerm.py")
+source_python("Python/subMSolverFerm.py")
+#===================================================
+#Objective function and initial parameter guess
+source("Python/subMObjectiveFerm.R")
+##Optimization
+###Model parameters (Initial guess, lower and upper bound) 
+Im = c(1, 1e-2, 20)
+Km = c(25, 0.1, 500)
+yA = c(0.9, 0, 1)
+Gm = c(1, 1e-3, 1e2)
+m = c(1e-3, 1e-8, 1)
+edemand = c(0.9, 0.1, 10)
+emax = c(0.19, 0.01, 1)
+etaf = c(2.55, 0.1, 20)
+etar = c(1.33, 0.1, 20)
+pb = c(0.71, 0, 1)
+pg = c(0.61, 0, 1)
+ng = c(0.8, 0, 1)
+nb = c(0.3, 0, 1)
+k = m
+
+ParmsFerm = rbind(Im, Km, yA, Gm, m, emax, ng, nb)
+
+##First guess by MCMC 
+CTAGuess0 <- modMCMC(subMObjectiveFerm, p = ParmsFerm[,1], lower = ParmsFerm[, 2], upper = ParmsFerm[, 3], niter = 30000,
+                     IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"))
+summary(CTAGuess0)
+##Estimate
+CTAP0 <- abc_optim(fn = subMObjectiveFerm, IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+                   par = as.numeric(summary(CTAGuess0)[c("mean"), ]), 
+                   lb = as.numeric(summary(CTAGuess0)[c("min"), ]), 
+                   ub = as.numeric(summary(CTAGuess0)[c("max"), ]))
+round(CTAP0$par, 6)
+# #Uncertainty
+# FermPU <- modMCMC(FermObjective, p = FermP$par, 
+#                   lower = ParmsFerm[1:8, 2], upper = ParmsFerm[1:8, 3], niter = 5000)
+# summary(FermPU)
+#Goodness of fit and simulations
+source("Python/subMFitFerm.R")
+SimCTA0 <- subMFitFerm(CTAP0$par, "Certovo", "Aerobic", IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"))
+SimCTA0$errors
+SimCTA0$R2all
+
+#Glucose concentration
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  summarise(y = mean(Gl, na.rm = T), ySD = sd(Gl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Glucose (", mu, "mol C g ", DW^{-1}, ")"))) +
+  geom_line(data = SimCTA0$Simulation, aes(x = Time, y = Gl)) +
+  geom_line(data = CAout$Simulation, aes(x = Time, y = Gl), color = "red")
+#Cumulative respiration from glucose
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  summarise(y = mean(CumulativeRg, na.rm = T), ySD = sd(CumulativeRg, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Cumulative ", CO[2]^{"Glucose"}, " production (", mu, "mol C ", g~(DW)^{-1}, ")"))) +
+  geom_line(data = SimCTA0$Simulation, aes(x = Time, y = CO2))+
+  geom_line(data = CAout$Simulation, aes(x = Time, y = CO2), color = "red")
+#Chloroform flush
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  summarise(y = mean(CFlushgl, na.rm = T), ySD = sd(CFlushgl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" ))) +
+  geom_line(data = SimCTA0$Simulation, aes(x = Time, y = Cflush)) +
+  geom_line(data = CAout$Simulation, aes(x = Time, y = Cflush), color = "red")
+#pH
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  summarise(y = mean(pH, na.rm = T), ySD = sd(pH, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab("pH") +
+  geom_line(data = SimCTA0$Simulation, aes(x = Time, y = pH))
+#=======================fermentation products and PLFA data
+#=======================Adding PLFA data according to microbial groups
+#===================Basic model and respective solver
+source_python("Python/subMFermGroups.py")
+#source_python("Python/subMSolverFermGroups.py")
+#===================================================
+#Objective function and initial parameter guess
+source("Python/subMObjectiveFermGroups.R")
+##Optimization
+###Model parameters (Initial guess, lower and upper bound) 
+Im = c(6, 0.1, 15)
+Km = c(221, 1, 400)
+Ki = c(100, 10, 1000)
+yA = c(0.9, 0.24, 1)
+Gm = c(3, 0.5, 10)
+m = c(1e-3, 1e-8, 1)
+edemand = c(1.6, 0.8, 5)
+emax = c(0.19, 0.01, 1)
+etaf = c(2.55, 0.1, 20)
+etar = c(1.33, 0.1, 20)
+pb = c(0.71, 0, 1)
+pg = c(0.61, 0, 1)
+ng = c(0.4, 1e-3, 1)
+nb = c(0.2, 1e-3, 1)
+k = c(1e-3, 1e-8, 1)
+kpf = c(0.05, 0, 1)
+kpb = kpf
+kp = c(0.14, 1e-6, 1)
+s = c(0.04, 0, 1)
+phm = c(0.03, 0, 0.2)
+eta = c(0.5, 0.1, 3)
+a = c(0.5, 0.001, 0.999)
+
+ParmsFermGroups = rbind(Im, yA, k, eta, a)
+#=============================Testing physiological differences between bacteria and fungi
+source_python("Python/subMFermGroups.py")
+#source_python("Python/subMSolverFermGroups.py")
+source("Python/subMObjectiveFermGroups.R")
+source("Python/subMFitFermGroups.R")
+
+#Null model - all parameters fixed for bacteria and fungi
+##First guess by MCMC 
+nullGuess <- modMCMC(subMObjectiveFermGroups, free = NA, IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+                     p = ParmsFermGroups[,1], 
+                     lower = ParmsFermGroups[, 2], 
+                     upper = ParmsFermGroups[, 3], niter = 30000)
+summary(nullGuess)
+#Estimate
+null_p <- abc_optim(fn = subMObjectiveFermGroups, free = NA, IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+                    par = ParmsFermGroups[,1], 
+                    lb = ParmsFermGroups[,2], 
+                    ub = ParmsFermGroups[,3],
+                    maxCycle = 3000, FoodNumber = 50, criter = 100)
+round(null_p$par, 6)
+null_model <- subMFitFermGroups(null_p$par, free = NA, IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+                                 Soil = 'Certovo', Treatment = 'Aerobic')
+null_model$errors
+null_model$R2all
+
+#subMObjectiveFermGroups(null_p$par, free = NA, IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"))
+
+#Alternative models with microbial group-specific parameters
+vpars0 <- as.matrix(expand.grid(c("Im", "yA", "k", "eta"), 
+                                c("Im", "yA", "k", "eta"),
+                                c("Im", "yA", "k", "eta"),
+                                c("Im", "yA", "k", "eta")))
+#==================Running in parallel
+registerDoParallel(150)
+
+vpars <- foreach(i=1:nrow(vpars0), .combine=rbind, .multicombine = TRUE) %dopar% {
+  
+  matrix(c(setdiff(c("Im", "yA", "k", "eta"), 
+                   setdiff(c("Im", "yA", "k", "eta"), unique(vpars0[i, ]))), 
+           rep(NA, times = (4-length(setdiff(c("Im", "yA", "k", "eta"), 
+                                             setdiff(c("Im", "yA", "k", "eta"), unique(vpars0[i, ]))))))),
+         nrow = 1, ncol = 4)
+  
+}
+
+stopImplicitCluster()
+#=================Running sequentially (takes ages)
+#Keep the unique rows only
+vpars <- matrix(nrow = 0, ncol = 4)
+for(i in 1:nrow(vpars0)){
+  vpars <- rbind(vpars, matrix(c(setdiff(c("Im", "yA", "k", "eta"), 
+                                         setdiff(c("Im", "yA", "k", "eta"), unique(vpars0[i, ]))), 
+                                 rep(NA, times = (4-length(setdiff(c("Im", "yA", "k", "eta"), 
+                                                                   setdiff(c("Im", "yA", "k", "eta"), unique(vpars0[i, ]))))))),
+                               nrow = 1, ncol = 4))
+}
+#====================================
+vpars <- vpars[!duplicated(vpars), ]
+rm(vpars0)
+#====================================
+source("Python/GroupsParallel.R")
+
+registerDoParallel(nrow(vpars))
+
+res <- foreach(i=1:nrow(vpars), .combine=rbind, .multicombine = TRUE,
+               .packages=c("FME", "dplyr", "deSolve", "reticulate", "ABCoptim")) %dopar% {
+                 
+                 GroupsParallel(i)
+                 
+               }
+
+stopImplicitCluster()
+
+summary(res)
+
+resD <- as.data.frame(rbind(c(rep("NULL", 4), null_model$errors, null_model$R2all), res))
+
+for(i in 5:17){
+  resD[, i] <- as.numeric(resD[, i])
+}
+
+resD$pr <- pf(q=(resD[1, "Fnorm"] - resD[, "Fnorm"])*(resD[, "n"] - resD[, "p"])/resD[, "Fnorm"]/(resD[, "p"] - resD[1, "p"]), 
+             df1=(resD[, "p"] - resD[1, "p"]), 
+             df2=(resD[, "n"] - resD[, "p"]), 
+             lower.tail=F)
+resD <- resD[order(resD$pr), ]
+#==============================fitting the best model - Im, and k differs between bacteria and fungi
+ParmsFermFinal = rbind(Im, Im, k, k, yA, eta, a)
+#Best model - emax and Im differs between bacteria and fungi
+##First guess by MCMC 
+# CAFinalGuess <- modMCMC(subMObjectiveFermGroups, free = c("Im", "yA", "k", "eta"), 
+#                         IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+#                         p = as.numeric(ParmsFermFinal[,1]), 
+#                         lower = as.numeric(ParmsFermFinal[, 2]), 
+#                         upper = as.numeric(ParmsFermFinal[, 3]), niter = 30000, updatecov = 100, burninlength = 500)
+# summary(CAFinalGuess)
+#Estimate
+# CAFinal_p <- abc_optim(fn = subMObjectiveFermGroups, free = c("Im", "yA", "k", "eta"),
+#                     par = as.numeric(ParmsFermFinal[,1]), #ParmsFermFinal[,1], 
+#                     lb = as.numeric(ParmsFermFinal[,2]), #ParmsFermFinal[,2],
+#                     ub = as.numeric(ParmsFermFinal[,3]), #ParmsFermFinal[,3], 
+#                     IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+#                     maxCycle = 3000, FoodNumber = 50, criter = 100)
+# names(CAFinal_p$par) <- c("ImF", "ImB", "yAF", "yAB", "kF", "kB", "etaF", "etaB", "a") #"nb", "ng", "a"
+# round(CAFinal_p$par, 6)
+# SimCTAFinal <- subMFitFermGroups(CAFinal_p$par, c("Im", "yA", "k", "eta"),
+#                                  IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+#                                  Soil = "Certovo", Treatment = "Aerobic")
+# SimCTAFinal$errors
+# SimCTAFinal$R2all
+#Making 100 parameter estimates to get the best parameters and calculate error of estimate
+##Run on server
+n_iter = 100
+source("Python/finalParallel.R")
+registerDoParallel(n_iter)
+
+CTfinalPars <- foreach(i=1:n_iter, .combine=rbind, .multicombine = TRUE,
+               .packages=c("FME", "dplyr", "deSolve", "reticulate", "ABCoptim")) %dopar% {
+                 
+                 finalParallel(i)
+                 
+               }
+
+stopImplicitCluster()
+
+CTfinalPars <- read.csv("CTfinalPars.csv", row.names = NULL)[, -1]
+summary(CTfinalPars)
+#adding goodness of fit
+CTGF <- data.frame(R2 = numeric(length = 100), R2adj = numeric(length = 100), ll = numeric(length = 100),
+                   AIC = numeric(length = 100), Form = numeric(length = 100), Gl = numeric(length = 100),
+                   CO2 = numeric(length = 100), Fungi = numeric(length = 100), Bacteria = numeric(length = 100),
+                   Cflush = numeric(length = 100), pH = numeric(length = 100)) 
+
+for(i in 1:100){
+  SimOut <- subMFitFermGroups(as.numeric(CTfinalPars[i, ]), c("Im", "k"),
+                                   IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+                                   Soil = "Certovo", Treatment = "Aerobic")
+  CTGF[i, ] <- c(SimOut$errors[1:5], SimOut$R2all)
+}
+CTbestP <- which(CTGF$ll == max(CTGF$ll))
+CTfinalPars[CTbestP, ]
+CTGF[CTbestP, ]
+
+CTfinalBest <- subMFitFermGroups(as.numeric(CTfinalPars[CTbestP, ]), c("Im", "k"),
+                                 IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+                                 Soil = "Certovo", Treatment = "Aerobic")
+#Glucose concentration
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  summarise(y = mean(Gl, na.rm = T), ySD = sd(Gl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil) + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Glucose (", mu, "mol C g ", DW^{-1}, ")"))) +
+  geom_line(data = CTfinalBest$Simulation, aes(x = Time, y = Gl))# +
+  #geom_line(data = null_model$Simulation, aes(x = Time, y = Gl), color = "red")
+#Cumulative respiration from glucose
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  summarise(y = mean(CumulativeRg, na.rm = T), ySD = sd(CumulativeRg, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Cumulative ", CO[2], " production (", mu, "mol C ", g~(DW)^{-1}, ")"))) +
+  geom_line(data = CTfinalBest$Simulation, aes(x = Time, y = CO2))#+
+  #geom_line(data = null_model$Simulation, aes(x = Time, y = CO2), color = "red")
+#Chloroform flush
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  summarise(y = mean(CFlushgl, na.rm = T), ySD = sd(CFlushgl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" ))) +
+  geom_line(data = CTfinalBest$Simulation, aes(x = Time, y = Cflush))# +
+  #geom_line(data = null_model$Simulation, aes(x = Time, y = Cflush), color = "red")
+#pH
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  summarise(y = mean(pH, na.rm = T), ySD = sd(pH, na.rm = T),
+            ExtraH = mean(ExtraH, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab("pH") +
+  geom_line(data = CTfinalBest$Simulation, aes(x = Time, y = pH))# +
+  #geom_line(data = null_model$Simulation, aes(x = Time, y = pH), color = "red")+
+  #geom_point(aes(x = Time, y = -log10(10^-4.3+ExtraH)), color = "green")
+
+
 #PLFA
 IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
-  summarise(y = mean(PLFAgl, na.rm = T), ySD = sd(PLFAgl, na.rm = T)) %>% 
+  summarise(y = mean(Fungl, na.rm = T), ySD = sd(Fungl, na.rm = T)) %>% 
   ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
   scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
                                                                      legend.position = c(0.85, 0.85)) +
   facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
-  xlab("Time (days)") + ylab(expression(paste("Glucose-C in PLFA (", mu, "mol C ",g~(DW)^{-1}, ")" ))) +
-  geom_line(data = PAout$Simulation, aes(x = Time, y = PLFA))
-#=========================Multi-objective optimization
-# Number of objectives
-nobj <- 6
-# Number of variables
-nvar <- length(p0)
-# All the objectives are to be minimized
-minmax <- c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)
-# Define the bound constraints
-bounds <- matrix(data = 1, nrow = nvar, ncol = 2)
-bounds[, 1] <- as.numeric(apply(CAguess$pars, 2, quantile, 0.05))
-bounds[, 2] <- as.numeric(apply(CAguess$pars, 2, quantile, 0.95))
-# Caramel optimization
-CaOptMulti <-
-  caRamel(nobj = nobj,
-          nvar = nvar,
-          minmax = minmax,
-          bounds = bounds,
-          func = subMObjective,
-          popsize = 100,
-          archsize = 300,
-          maxrun = 1500,
-          prec = matrix(1.e-3, nrow = 1, ncol = nobj),
-          carallel = 0, graph = FALSE)
-CaOptMulti$success
-apply(CaOptMulti$objectives, 1, sum)
+  xlab("Time (days)") + ylab("Fungi") +
+  geom_line(data = CTfinalBest$Simulation, aes(x = Time, y = Fungi))# +
+  #geom_line(data = null_model$Simulation, aes(x = Time, y = Fungi), color = "red")
 
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  summarise(y = mean(Bacgl, na.rm = T), ySD = sd(Bacgl, na.rm = T),
+            y2 = mean(Bacgl, na.rm = T), ySD = sd(Bacgl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_grid(Treatment~Soil, scales = "free") + geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab("Bacteria") +
+  geom_line(data = CTfinalBest$Simulation, aes(x = Time, y = Bacteria))# +
+  #geom_line(data = null_model$Simulation, aes(x = Time, y = Bacteria), color = "red")
+
+#Calculating residuals for all variables
+CTmeans <- as.matrix(IE %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+  group_by(Time) %>% summarize(Glucose = mean(Gl, na.rm = T), 
+                               CO2 = mean(CumulativeRg, na.rm = T),
+                               Fungi = mean(Fungl, na.rm = T),
+                               Bacteria = mean(Bacgl, na.rm = T),
+                               Cflush = mean(CFlushgl, na.rm = T),
+                               pH = mean(pH, na.rm = T)))
+CTresiduals <- ((CTfinalBest$Yhat - CTmeans[, -1])/CTfinalBest$W)^2      
+CTresiduals <- as.data.frame(cbind(CTmeans[, 1], CTresiduals))
+colnames(CTresiduals)[1] <- c("Time")  
+write.csv(CTresiduals, "CTresiduals.csv", row.names = F)
+
+#Comparing DNA a PLFA based fungi to bacteria ratio again applying estimated conversion factors
+InitialMBCCT = mean(as.numeric(IE[(IE$Time == 0 & IE$Soil == "Certovo" & IE$Treatment == "Aerobic"), "Cflush"]), na.rm = T)/0.24
+InitialFCT = InitialMBCCT*tail(as.numeric(CTfinalPars[43, ]), 1)
+InitialBCT = InitialMBCCT*(1 - tail(as.numeric(CTfinalPars[43, ]), 1))
+kfCT <- mean(as.numeric(IE[(IE$Time == 0 & IE$Soil == "Certovo" & IE$Treatment == "Aerobic"), "PLFAf"]), na.rm = T)/InitialFCT
+kbCT <- mean(as.numeric(IE[(IE$Time == 0 & IE$Soil == "Certovo" & IE$Treatment == "Aerobic"), "PLFAb"]), na.rm = T)/InitialBCT
+
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic") %>% 
+  summarise(y = mean(PLFAf/kfCT/PLFAb*kbCT, na.rm = T), ySD = sd(PLFAf/kfCT/PLFAb*kbCT, na.rm = T),
+            y2 = mean(DNAf/DNAb, na.rm = T), ySD2 = sd(PLFAf/PLFAb, na.rm = T)) %>% 
+  ggplot(aes(y2, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  #geom_point(cex = 6, pch = 21, col = "red", aes(Time, y2)) + 
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  facet_wrap(Treatment~Soil, scales = "free") + #geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  #geom_errorbar(aes(ymin = y2 - ySD2, ymax = y2 + ySD2), col = "red") + 
+  xlab("Time (days)") + ylab(expression(paste("Fungi to bacteria ratio (unitless)"))) +
+  stat_smooth(method = lm)
+
+#==================================================For AI
+#Matrix of parameters for 100 different simulations (Xp) - 100 rows (100 simulations) and 7 columns - 7 parameters to optimize
+Xp <- matrix(c(sample(seq(from = Im[2], to = Im[3], length.out = 999), size = 100), #ImF
+        sample(seq(from = Im[2], to = Im[3], length.out = 999), size = 100), #ImF
+        sample(seq(from = k[2], to = k[3], length.out = 999), size = 100), #kF
+        sample(seq(from = k[2], to = k[3], length.out = 999), size = 100), #kB
+        sample(seq(from = yA[2], to = yA[3], length.out = 999), size = 100), #yA
+        sample(seq(from = eta[2], to = eta[3], length.out = 999), size = 100), #eta
+        sample(seq(from = a[2], to = a[3], length.out = 999), size = 100) #a
+        ), ncol = 7, nrow = 100)
+Xp[1, ] <- as.numeric(CTfinalPars[43, ])
+
+#Matrix of simulations Xs - 100 rows (100 simulations) and 17*6 columns - 17 times and 6 measured variables
+Xs <- matrix(nrow = 100, ncol = 17*6)
+for(i in 1:100){
+  Xs[i, ] <- as.numeric(subMFitFermGroups(as.numeric(Xp[i, ]), c("Im", "k"),
+                                          IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+                                          Soil = "Certovo", Treatment = "Aerobic")$Yhat)
+}
+
+#Matrix of data (Xd) - 1 row and 17*6 columns - 17 times and 6 measured variables
+Xd <- matrix(nrow = 1, ncol = 17*6)
+Xd[1, ] <- as.numeric(as.matrix(IE %>% filter(Treatment == "Aerobic" & Soil == "Certovo") %>% 
+                       group_by(Time) %>% summarize(Glucose = mean(Gl, na.rm = T), 
+                                                    CO2 = mean(CumulativeRg, na.rm = T),
+                                                    Fungi = mean(Fungl, na.rm = T),
+                                                    Bacteria = mean(Bacgl, na.rm = T),
+                                                    Cflush = mean(CFlushgl, na.rm = T),
+                                                    pH = mean(pH, na.rm = T)))[, -1])
+write.csv(Xp, "Xp.csv", row.names = FALSE)
+write.csv(Xs, "Xs.csv", row.names = FALSE)
+write.csv(Xd, "Xd.csv", row.names = FALSE)
+#==================================================Plesne - aerobic conditions
+#==================================================#
+#~~~~~~~~~~~~~Parameters estimation~~~~~~~~~~~~~~~~#
+#==================================================#
+#=======================fermentation products and PLFA data
+#===================Basic model and respective solver
+source_python("Python/subMFermGroups.py")
+#source_python("Python/subMSolverFermGroups.py")
+#===================================================
+#Objective function and initial parameter guess
+source("Python/subMObjectiveFermGroups.R")
+##Optimization
+###Model parameters (Initial guess, lower and upper bound) 
+Im = c(6, 0.1, 15)
+Km = c(221, 1, 400)
+Ki = c(100, 10, 1000)
+yA = c(0.9, 0.24, 1)
+Gm = c(3, 0.5, 10)
+m = c(1e-3, 1e-8, 1)
+edemand = c(1.6, 0.8, 5)
+emax = c(0.19, 0.01, 1)
+etaf = c(2.55, 0.1, 20)
+etar = c(1.33, 0.1, 20)
+pb = c(0.71, 0, 1)
+pg = c(0.61, 0, 1)
+ng = c(0.4, 1e-3, 1)
+nb = c(0.2, 1e-3, 1)
+k = c(1e-3, 1e-8, 1)
+kpf = c(0.05, 0, 1)
+kpb = kpf
+kp = c(0.14, 1e-6, 1)
+s = c(0.04, 0, 1)
+phm = c(0.03, 0, 0.2)
+eta = c(0.5, 0.1, 3)
+a = c(0.5, 0.001, 0.999)
+
+ParmsFermGroups = rbind(Im, yA, k, eta, a)
+#=============================Testing physiological differences between bacteria and fungi
+source_python("Python/subMFermGroups.py")
+#source_python("Python/subMSolverFermGroups.py")
+source("Python/subMObjectiveFermGroups.R")
+source("Python/subMFitFermGroups.R")
+
+#Null model - all parameters fixed for bacteria and fungi
+# ##First guess by MCMC 
+# nullGuess <- modMCMC(subMObjectiveFermGroups, free = NA, IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
+#                      p = ParmsFermGroups[,1], 
+#                      lower = ParmsFermGroups[, 2], 
+#                      upper = ParmsFermGroups[, 3], niter = 30000)
+# summary(nullGuess)
+#Estimate
+null_pPL <- abc_optim(fn = subMObjectiveFermGroups, free = NA, IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Plesne"),
+                    par = ParmsFermGroups[,1], 
+                    lb = ParmsFermGroups[,2], 
+                    ub = ParmsFermGroups[,3],
+                    maxCycle = 3000, FoodNumber = 50, criter = 100)
+round(null_pPL$par, 6)
+null_modelPL <- subMFitFermGroups(null_pPL$par, free = NA, IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Plesne"),
+                                Soil = 'Plesne', Treatment = 'Aerobic')
+null_modelPL$errors
+null_modelPL$R2all
+
+#================================Variable parameters
+source("Python/GroupsParallel.R")
+
+registerDoParallel(nrow(vpars))
+
+resPL <- foreach(i=1:nrow(vpars), .combine=rbind, .multicombine = TRUE,
+               .packages=c("FME", "dplyr", "deSolve", "reticulate", "ABCoptim")) %dopar% {
+                 
+                 GroupsParallel(i)
+                 
+               }
+
+stopImplicitCluster()
+
+summary(resPL)
+
+resDPL <- as.data.frame(rbind(c(rep("NULL", 4), null_modelPL$errors, null_modelPL$R2all), resPL))
+
+for(i in 5:17){
+  resDPL[, i] <- as.numeric(resDPL[, i])
+}
+
+resDPL$pr <- pf(q=(resDPL[1, "Fnorm"] - resDPL[, "Fnorm"])*(resDPL[, "n"] - resDPL[, "p"])/resDPL[, "Fnorm"]/(resDPL[, "p"] - resDPL[1, "p"]), 
+              df1=(resDPL[, "p"] - resDPL[1, "p"]), 
+              df2=(resDPL[, "n"] - resDPL[, "p"]), 
+              lower.tail=F)
+resDPL <- resDPL[order(resDPL$pr), ]
+#==============================fitting the best model - Im, and k differs between bacteria and fungi
+ParmsFermFinal = rbind(Im, Im, k, k, yA, eta, a)
+#Making 100 parameter estimates to get the best parameters and calculate error of estimate
+##Run on server
+n_iter = 100
+source("Python/finalParallel.R")
+registerDoParallel(n_iter)
+
+PLfinalPars <- foreach(i=1:n_iter, .combine=rbind, .multicombine = TRUE,
+                       .packages=c("FME", "dplyr", "deSolve", "reticulate", "ABCoptim")) %dopar% {
+                         
+                         finalParallel(i)
+                         
+                       }
+
+
+PLfinalPars <- read.csv("PLfinalPars.csv", row.names = NULL)[, -1]
+#adding goodness of fit
+PLGF <- data.frame(R2 = numeric(length = 100), R2adj = numeric(length = 100), ll = numeric(length = 100),
+                   AIC = numeric(length = 100), Form = numeric(length = 100), Gl = numeric(length = 100),
+                   CO2 = numeric(length = 100), Fungi = numeric(length = 100), Bacteria = numeric(length = 100),
+                   Cflush = numeric(length = 100), pH = numeric(length = 100)) 
+
+for(i in 1:100){
+  SimOut <- subMFitFermGroups(as.numeric(PLfinalPars[i, ]), c("Im", "k"),
+                              IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Plesne"),
+                              Soil = "Plese", Treatment = "Aerobic")
+  PLGF[i, ] <- c(SimOut$errors[1:5], SimOut$R2all)
+}
+PLbestP <- which(PLGF$ll == max(PLGF$ll))
+PLfinalPars[PLbestP, ]
+PLGF[PLbestP, ]
+
+PLfinalBest <- subMFitFermGroups(as.numeric(PLfinalPars[PLbestP, ]), c("Im", "k"),
+                                 IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Plesne"),
+                                 Soil = "Plesne", Treatment = "Aerobic")
+#===========================================================================
+#Glucose concentration
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne") %>% 
+  summarise(y = mean(Gl, na.rm = T), ySD = sd(Gl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Glucose (", mu, "mol C g ", DW^{-1}, ")"))) +
+  geom_line(data = PLfinalBest$Simulation, aes(x = Time, y = Gl)) #+
+  #geom_line(data = null_modelPL$Simulation, aes(x = Time, y = Gl), color = "red")
+#Cumulative respiration from glucose
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne") %>% 
+  summarise(y = mean(CumulativeRg, na.rm = T), ySD = sd(CumulativeRg, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Cumulative ", CO[2], " production (", mu, "mol C ", g~(DW)^{-1}, ")"))) +
+  geom_line(data = PLfinalBest$Simulation, aes(x = Time, y = CO2))#+
+  #geom_line(data = null_modelPL$Simulation, aes(x = Time, y = CO2), color = "red")
+#Chloroform flush
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne" & CFlushgl<100) %>% 
+  summarise(y = mean(CFlushgl, na.rm = T), ySD = sd(CFlushgl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab(expression(paste("Glucose-C in ",CHCl[3]~flush, " (", mu, "mol C ",g~(DW)^{-1}, ")" ))) +
+  geom_line(data = PLfinalBest$Simulation, aes(x = Time, y = Cflush))# +
+  #geom_line(data = null_modelPL$Simulation, aes(x = Time, y = Cflush), color = "red")
+#pH
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne") %>% 
+  summarise(y = mean(pH, na.rm = T), ySD = sd(pH, na.rm = T),
+            ExtraH = mean(ExtraH, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab("pH") +
+  geom_line(data = PLfinalBest$Simulation, aes(x = Time, y = pH))# +
+  #geom_line(data = null_modelPL$Simulation, aes(x = Time, y = pH), color = "red")
+
+#PLFA
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne") %>% 
+  summarise(y = mean(Fungl, na.rm = T), ySD = sd(Fungl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab("Fungi") +
+  geom_line(data = PLfinalBest$Simulation, aes(x = Time, y = Fungi))# +
+  #geom_line(data = null_modelPL$Simulation, aes(x = Time, y = Fungi), color = "red")
+
+IE %>% group_by(Time, Treatment, Soil) %>% filter(Treatment == "Aerobic" & Soil == "Plesne") %>% 
+  summarise(y = mean(Bacgl, na.rm = T), ySD = sd(Bacgl, na.rm = T),
+            y2 = mean(Bacgl, na.rm = T), ySD = sd(Bacgl, na.rm = T)) %>% 
+  ggplot(aes(Time, y)) + geom_point(cex = 6, pch = 21, aes(fill = Treatment), show.legend = F) +
+  scale_fill_manual(values = c("white", "grey")) + theme_min + theme(legend.title = element_blank(),
+                                                                     legend.position = c(0.85, 0.85)) +
+  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD)) + 
+  xlab("Time (days)") + ylab("Bacteria") +
+  geom_line(data = PLfinalBest$Simulation, aes(x = Time, y = Bacteria))# +
+  #geom_line(data = null_modelPL$Simulation, aes(x = Time, y = Bacteria), color = "red")
+
+#Calculating residuals for all variables
+PLmeans <- as.matrix(IE %>% filter(Treatment == "Aerobic" & Soil == "Plesne") %>% 
+                       group_by(Time) %>% summarize(Glucose = mean(Gl, na.rm = T), 
+                                                    CO2 = mean(CumulativeRg, na.rm = T),
+                                                    Fungi = mean(Fungl, na.rm = T),
+                                                    Bacteria = mean(Bacgl, na.rm = T),
+                                                    Cflush = mean(CFlushgl, na.rm = T),
+                                                    pH = mean(pH, na.rm = T)))
+PLmeans[4, 6] <- NA
+PLresiduals <- ((PLfinalBest$Yhat - PLmeans[, -1])/PLfinalBest$W)^2      
+PLresiduals <- as.data.frame(cbind(PLmeans[, 1], PLresiduals))
+colnames(PLresiduals)[1] <- c("Time")  
+write.csv(PLresiduals, "PLresiduals.csv", row.names = F)
+
+#Comparing DNA a PLFA based fungi to bacteria ratio again applying estimated conversion factors
+InitialMBCPL = mean(as.numeric(IE[(IE$Time == 0 & IE$Soil == "Plesne" & IE$Treatment == "Aerobic"), "Cflush"]), na.rm = T)/0.24
+InitialFPL = InitialMBCPL*tail(as.numeric(PLfinalPars[PLbestP, ]), 1)
+InitialBPL = InitialMBCPL*(1 - tail(as.numeric(PLfinalPars[PLbestP, ]), 1))
+kfPL <- mean(as.numeric(IE[(IE$Time == 0 & IE$Soil == "Plesne" & IE$Treatment == "Aerobic"), "PLFAf"]), na.rm = T)/InitialFPL
+kbPL <- mean(as.numeric(IE[(IE$Time == 0 & IE$Soil == "Plesne" & IE$Treatment == "Aerobic"), "PLFAb"]), na.rm = T)/InitialBPL
+
+PLresiduals$Soil <- c("Plesne")
+CTresiduals$Soil <- c("Certovo")
+
+residualsAll <- rbind(CTresiduals, PLresiduals)
+write.csv(residualsAll, "residualsAll.csv", row.names = F)
