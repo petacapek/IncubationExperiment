@@ -1,10 +1,20 @@
 finalParallel <- function(ID){
-  pout <- abc_optim(fn = subMObjectiveFermGroups, free = c("Im", "k"),
-                    par = as.numeric(ParmsFermFinal[,1]), #ParmsFermFinal[,1], 
-                    lb = as.numeric(ParmsFermFinal[,2]), #ParmsFermFinal[,2],
-                    ub = as.numeric(ParmsFermFinal[,3]), #ParmsFermFinal[,3], 
-                    IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Certovo"),
-                    maxCycle = 3000, FoodNumber = 50, criter = 100)
-  names(pout$par) <- c("ImF", "ImB", "kF", "kB", "yA", "eta", "a")
+  set.seed(9)
+  ##First guess by MCMC 
+  pGuess <- modMCMC(subMObjectiveFermGroups, free = c("edemand", "eta", "k"), 
+                    p = as.numeric(ParmsFermFinal[, 1]), 
+                    lower = as.numeric(ParmsFermFinal[, 2]), 
+                    upper = as.numeric(ParmsFermFinal[, 3]), 
+                    IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Plesne"),
+                    niter = 30000, verbose = F)
+  
+  
+  pout <- abc_optim(fn = subMObjectiveFermGroups, free = c("edemand", "eta", "k"),
+                    par = as.numeric(summary(pGuess)[c("mean"), ]),
+                    lb = as.numeric(summary(pGuess)[c("min"), ]),
+                    ub = as.numeric(summary(pGuess)[c("max"), ]), 
+                    IEactive = subset(IE, Treatment == "Aerobic" & Soil == "Plesne"),
+                    maxCycle = 30000, FoodNumber = 50, criter = 100)
+  names(pout$par) <- c("edemandF", "etaF", "kF", "edemandB", "etaB", "kB", "Im", "KmG", "KmA", "Gm", "psi", "nb", "ng", "a")
   return(c(ID,pout$par))
 }

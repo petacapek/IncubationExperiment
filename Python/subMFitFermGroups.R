@@ -1,57 +1,56 @@
 subMFitFermGroups<-function(x, free, IEactive, Soil, Treatment){
-  #all parameters that can be potentially free
-  free_p <- c("ImF", "ImB", "yAF", "yAB", "kF", "kB", "etaF", "etaB")
-  all_p <- rep(NA, length(free_p))
-  names(all_p) <- free_p
-  #these parameters are fixed in this iteration - defined by "free"
-  fixed_p <- setdiff(free_p, c(paste0(free, "F"), paste0(free, "B"))) # unique(vpars[1, ])
-  #fixed_p <- setdiff(free_p, c(paste0(NA, "F"), paste0(NA, "B")))
-  #these parameters are variable in this iteration - defined in "free"
-  var_p <- setdiff(free_p, fixed_p)
+  #model parameters
+  m_pars <- c("Im", "KmG", "KmA", "Gm", "edemand", "psi", "eta", "k") #
   
-  #=========================input vector "x" is reformatted to all_p   
-  #variable parameters in x
-  #var_p_x <- ifelse(length(var_p) != 0, x[1:(length(var_p))], NA)
-  var_p_x <- x[1:(length(var_p))]
-  names(var_p_x) <- var_p
-  #adding variable parameters to all_p 
-  all_p[!is.na(match(names(all_p), names(var_p_x)))] <- var_p_x
-  
-  #fixed parameters in x
-  fixed_p_x <- rep(x[((length(var_p))+1):(length(x)-1)], each = 2) #last is ng - same for all iterations (microbial community independent)
-  names(fixed_p_x) <- fixed_p
-  #adding variable parameters to all_p 
-  all_p[!is.na(match(names(all_p), names(fixed_p_x)))] <- fixed_p_x
-  #adding last - microbial community independent parameter ng
-  #all_p <- append(all_p, tail(x, 3))
-  #=============================================================================
-  #=====================distinguish two sets of parameters
-  #inherent model parameters - Fungal Im, Km, k, eta + Bacterial Im, Km, k, eta
-  model_pars <- as.numeric(all_p[1:8])
+  if((0 %in% free) == T){
+    all_p <- as.numeric(rep(x[1:(length(x)-2)], times = 2))
+  }else{
+    m_parsFungal <- x[1:length(free)]
+    names(m_parsFungal) <- free
+    m_parsBacterial <- x[(length(free)+1):(length(free)*2)]
+    names(m_parsBacterial) <- free
+    
+    m_parsfixed <- x[(length(free)*2 + 1):(length(x)-2)]
+    names(m_parsfixed) <- setdiff(m_pars, free)
+    
+    m_parsFungal <- append(m_parsFungal, m_parsfixed)
+    m_parsFungal <- m_parsFungal[m_pars]
+    
+    m_parsBacterial <- append(m_parsBacterial, m_parsfixed)
+    m_parsBacterial <- m_parsBacterial[m_pars]
+    
+    all_p <- as.numeric(c(m_parsFungal, m_parsBacterial))
+  }
   #conversion factors - nb and ng
-  conversions <- c(0.24, 0.41)#as.numeric(all_p[15:16])
-  #fungal kp will be fixed according to Camenzid et al., (2024)
-  #conversions <- append(conversions, 2.55e-3)
+  conversions <- as.numeric(tail(x, 2))
   #==========================Extracting sampling time from the dataset
   times <- unique(IEactive$Time)
   timesSim <- seq(0, max(times), length.out = 100)
   #==========================Defining initial conditions that are passed to model
-  Bunlab0 = mean(as.numeric(IEactive[IEactive$Time == 0, "Cflush"]), na.rm = T)/conversions[1]
-  BUF0 = Bunlab0*tail(x, 1)
-  BUB0 = Bunlab0*(1 - tail(x, 1))
-  y0 <- c(500, 0, 0, 0, 0, 0, 0, 0, BUF0, BUB0, 0)
   H0 <- 10^-mean(as.numeric(IEactive[IEactive$Time == 0, "pH"]), na.rm = T)
+  Bunlab0 = mean(as.numeric(IEactive[IEactive$Time == 0, "Cflush"]), na.rm = T)/conversions[1]
+  a = mean(as.numeric(IEactive[IEactive$Time == 0, "DNAfTrue"]), na.rm = T)/
+    (mean(as.numeric(IEactive[IEactive$Time == 0, "DNAfTrue"]), na.rm = T) + mean(as.numeric(IEactive[IEactive$Time == 0, "DNAbTrue"]), na.rm = T))
+  BUF0 = Bunlab0*a
+  BUB0 = Bunlab0*(1 - a)
+  y0 <- c(500, 0, 0, 0, 0, 0, 0, 0, BUF0, BUB0, 0)
+  names(y0) <- c("Sl", "GF", "GaF", "BlF", "GB", "GaB", "BlB", "CO2l", "BuF", "BuB", "Acet")
+  
   #kpF and kpB can be calculated using BUF0, BUB0, and fungal and bacterial PLFA at time zero
   conversions <- append(conversions, mean(as.numeric(IEactive[IEactive$Time == 0, "PLFAf"]), na.rm = T)/BUF0)#kpf
   conversions <- append(conversions, mean(as.numeric(IEactive[IEactive$Time == 0, "PLFAb"]), na.rm = T)/BUB0)#kpB
   ##==========================Running model
-  ModelOut <- odeint(subMFermGroups, y0, times, args=tuple(model_pars))
-  SimOut <- odeint(subMFermGroups, y0, timesSim, args=tuple(model_pars))
+  ModelOut <- odeint(subMFermGroups, y0, times, args=tuple(all_p))
+  SimOut <- odeint(subMFermGroups, y0, timesSim, args=tuple(all_p))
+  #ModelOut <- ode(y=y0, parms=all_p, subMR, times=times, method = "ode45")[, -1]
+  #SimOut <- ode(y=y0, parms=all_p, subMR, times=timesSim, method = "ode45")[, -1]
   #==========================Reformatting results to measured data
   extraH <- as.numeric(t((IEactive %>% group_by(Time) %>% summarise(mean(ExtraH, na.rm = T)))[,2]))
-  extraHsim <- predict(lc1, newdata = data.frame(Time = timesSim))
+  #extraHsim <- predict(lc1, newdata = data.frame(Time = timesSim)) #Certovo
+  extraHsim <- predict(lc3, newdata = data.frame(Time = timesSim)) #Plesne
   mpH <- as.numeric(t((IEactive %>% group_by(Time) %>% summarise(mean(pH, na.rm = T)))[,2]))
-  mpHsim <- predict(lc2, newdata = data.frame(Time = timesSim))
+  #mpHsim <- predict(lc2, newdata = data.frame(Time = timesSim)) #Certovo
+  mpHsim <- predict(lc4, newdata = data.frame(Time = timesSim)) #Plesne
   Yhat <- matrix(data = c(ModelOut[, 1], #glucose concentration
                           ModelOut[, 8], #cumulative CO2 - labelled
                           ModelOut[, 4]*conversions[3], #Fungi
@@ -85,9 +84,12 @@ subMFitFermGroups<-function(x, free, IEactive, Soil, Treatment){
                                                            pH = mean(pH, na.rm = T))
                  
   )[, -1]
-  Y[4, 5] <- NA
+  Y[4, 5] <- NA #Plesne
   ##Weights
   W <- matrix(rep(apply(Y, 2, sd, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
+  Wmin <- matrix(rep(apply(Y, 2, min, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
+  Wmax <- matrix(rep(apply(Y, 2, max, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
+  Wminmax <- Wmax - Wmin
   What <- matrix(rep(apply(Yhat, 2, sd, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
   ##Means
   M <- matrix(rep(apply(Y, 2, mean, na.rm = T), each = length(times)), nrow = length(times), ncol = dim(Y)[2])
@@ -112,6 +114,6 @@ subMFitFermGroups<-function(x, free, IEactive, Soil, Treatment){
   
   errors = c(R2 = R2, R2adj = R2adj, ll = ll, AIC = AIC, Fnorm = Fnorm, n = length(Y), p = length(x))
   
-  return(list(Simulation = Sim, errors = errors, R2all = R2all, Yhat = Yhat, W = W))# 
+  return(list(Simulation = Sim, errors = errors, R2all = R2all, Yhat = Yhat, W = W, Wminmax = Wminmax))# 
   
 }

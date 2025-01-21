@@ -1,52 +1,46 @@
 subMObjectiveFermGroups<-function(x, free, IEactive){#
-  #all parameters that can be potentially free
-  free_p <- c("ImF", "ImB", "yAF", "yAB", "kF", "kB", "etaF", "etaB") #
-  all_p <- rep(NA, length(free_p))
-  names(all_p) <- free_p
-  #these parameters are fixed in this iteration - defined by "free"
-  fixed_p <- setdiff(free_p, c(paste0(free, "F"), paste0(free, "B"))) # unique(vpars[1, ])
-  #fixed_p <- setdiff(free_p, c(paste0(c("Im", "emax"), "F"), paste0(c("Im", "emax"), "B")))
-  #these parameters are variable in this iteration - defined in "free"
-  var_p <- setdiff(free_p, fixed_p)
+  #model parameters
+  m_pars <- c("Im", "KmG", "KmA", "Gm", "edemand", "psi", "eta", "k") #
   
-  #=========================input vector "x" is reformatted to all_p   
-  #variable parameters in x
-  #var_p_x <- ifelse(length(var_p) != 0, x[1:(length(var_p))], NA)
-  var_p_x <- x[1:(length(var_p))]
-  names(var_p_x) <- var_p
-  #adding variable parameters to all_p 
-  all_p[!is.na(match(names(all_p), names(var_p_x)))] <- var_p_x
+  if((0 %in% free) == T){
+    all_p <- as.numeric(rep(x[1:(length(x)-3)], times = 2))
+  }else{
+    m_parsFungal <- x[1:length(free)]
+    names(m_parsFungal) <- free
+    m_parsBacterial <- x[(length(free)+1):(length(free)*2)]
+    names(m_parsBacterial) <- free
+    
+    m_parsfixed <- x[(length(free)*2 + 1):(length(x)-3)]
+    names(m_parsfixed) <- setdiff(m_pars, free)
+    
+    m_parsFungal <- append(m_parsFungal, m_parsfixed)
+    m_parsFungal <- m_parsFungal[m_pars]
+    
+    m_parsBacterial <- append(m_parsBacterial, m_parsfixed)
+    m_parsBacterial <- m_parsBacterial[m_pars]
+    
+    all_p <- as.numeric(c(m_parsFungal, m_parsBacterial))
+  }
   
-  #fixed parameters in x
-  fixed_p_x <- rep(x[((length(var_p))+1):(length(x)-1)], each = 2) #last is nb, ng and a - same for all iterations (microbial community independent)
-  #fixed_p_x <- rep(ParmsFermFinal[((length(var_p))+1):(nrow(ParmsFermFinal)), 1], each = 2)
-  names(fixed_p_x) <- fixed_p
-  #adding variable parameters to all_p 
-  all_p[!is.na(match(names(all_p), names(fixed_p_x)))] <- fixed_p_x
-  #adding last - microbial community independent parameters nb and ng
-  #all_p <- append(all_p, tail(x, 3))
-  #=============================================================================
-  #=====================distinguish two sets of parameters
-  #inherent model parameters - Fungal Im, Km, yA, k, eta + Bacterial Im, Km, yA, k, eta
-  model_pars <- as.numeric(all_p[1:8])
   #conversion factors - nb and ng
-  conversions <- c(0.24, 0.41)
-  #fungal kp will be fixed according to Camenzid et al., (2024)
-  #conversions <- append(conversions, 2.55e-3)
+  conversions <- as.numeric(tail(x, 3)[1:2])
   #==========================Extracting sampling time from the dataset
   times <- unique(IEactive$Time)
   #==========================Defining initial conditions that are passed to model
+  H0 <- 10^-mean(as.numeric(IEactive[IEactive$Time == 0, "pH"]), na.rm = T)
   Bunlab0 = mean(as.numeric(IEactive[IEactive$Time == 0, "Cflush"]), na.rm = T)/conversions[1]
   BUF0 = Bunlab0*tail(x, 1)
   BUB0 = Bunlab0*(1 - tail(x, 1))
   y0 <- c(500, 0, 0, 0, 0, 0, 0, 0, BUF0, BUB0, 0)
-  H0 <- 10^-mean(as.numeric(IEactive[IEactive$Time == 0, "pH"]), na.rm = T)
+  names(y0) <- c("Sl", "GF", "GaF", "BlF", "GB", "GaB", "BlB", "CO2l", "BuF", "BuB", "Acet")
   
   #kpF and kpB can be calculated using BUF0, BUB0, and fungal and bacterial PLFA at time zero
   conversions <- append(conversions, mean(as.numeric(IEactive[IEactive$Time == 0, "PLFAf"]), na.rm = T)/BUF0)#kpf
   conversions <- append(conversions, mean(as.numeric(IEactive[IEactive$Time == 0, "PLFAb"]), na.rm = T)/BUB0)#kpB
+  
   ##==========================Running model
-  ModelOut <- odeint(subMFermGroups, y0, times, args=tuple(model_pars))
+  ModelOut <- odeint(subMFermGroups, y0, times, args=tuple(all_p))
+  #ModelOut <- ode(y=y0, parms=all_p, subMR, times=times, method = "ode45")[, -1]
   #==========================Reformatting results to measured data
   extraH <- as.numeric(t((IEactive %>% group_by(Time) %>% summarise(mean(ExtraH, na.rm = T)))[,2]))
   mpH <- as.numeric(t((IEactive %>% group_by(Time) %>% summarise(mean(pH, na.rm = T)))[,2]))
@@ -65,21 +59,27 @@ subMObjectiveFermGroups<-function(x, free, IEactive){#
   #==========================Calculating error that is minimized
   ##Measured data
   Y <- as.matrix(IEactive %>% group_by(Time) %>% summarize(Glucose = mean(Gl, na.rm = T), 
-                                                           CO2 = mean(CumulativeRg, na.rm = T),
-                                                           Fungi = mean(Fungl, na.rm = T),
-                                                           Bacteria = mean(Bacgl, na.rm = T),
-                                                           Cflush = mean(CFlushgl, na.rm = T),
-                                                           pH = mean(pH, na.rm = T))
-                 
+                                                          CO2 = mean(CumulativeRg, na.rm = T),
+                                                          Fungi = mean(Fungl, na.rm = T),
+                                                          Bacteria = mean(Bacgl, na.rm = T),
+                                                          Cflush = mean(CFlushgl, na.rm = T),
+                                                          pH = mean(pH, na.rm = T))
+                
   )[, -1]
-  #Y[c(14, 15), 4] <- NA
-  Y[c(14, 15), 4] <- NA
-  Y[4, 5] <- NA
+  #Y[c(7, 8), c(4)] <- NA #Certovo
+  #Y[4, 5] <- NA #Plesne
   ##Weights
-  W <- matrix(rep(apply(Y, 2, sd, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
+  Wmin <- matrix(rep(apply(Y, 2, min, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
+  Wmax <- matrix(rep(apply(Y, 2, max, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
+  Wminmax <- Wmax - Wmin
+  #W <- matrix(rep(apply(Y, 2, sd, na.rm = T), each = length(times)), nrow = dim(Y)[1], ncol = dim(Y)[2])
+  #W <- apply(Y, 2, sd, na.rm = T)
   ##Error
-  out <- sum(((Yhat - Y)/W)^2, na.rm=T)
-  #out <- as.numeric(colSums(((Yhat - Y)/W)^2, na.rm=T))
+  #out <- sum(((Yhat - Y)/Wminmax)^2, na.rm=T)
+  ###Log-Likelihood error
+  #lls = 2*colSums((Y - Yhat)^2, na.rm = T)/2/W^2
   
-  return(out)
+  outIndividuals <- as.numeric(colSums(((Yhat - Y)/Wminmax)^2, na.rm=T))
+  
+  return(outIndividuals)
 }

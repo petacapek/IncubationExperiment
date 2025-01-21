@@ -1,74 +1,76 @@
 def subMFerm (y, t, pars):
     #define initial pools
-    Sl=y[0];    Gl=y[1];    Bl=y[2];     
-    CO2l=y[3];  Gu=y[4];    Bu=y[5];
-    Acet=y[6]
-    #define parameters
+    Sl=y[0];    G=y[1];    Ga=y[2];  Bl=y[3];     
+    CO2l=y[4];  Bu=y[5];   Acet=y[6];  
+    #Parameters to estimate
     Am=pars[0]; 
-    Km=pars[1]; 
-    yA=pars[2];
+    Kmglucose=pars[1]; 
+    Kmacetate=pars[2];
     Gm=pars[3]; 
-    m=pars[4]; 
-    #k=pars[4];
-    #g=pars[5];
-    er=4.4;
-    ef=2;
-    edemand=1.6; #0.88;
-    emax=pars[5];
-    etaf=2.55;
-    etar=1.33;
-    pb=0.71;
-    pg=0.61;
-    
-    
+    edemand=pars[4]; #1.6; #0.88;
+    psi=pars[5];
+    eta=pars[6]; #epsilon_r*sigma_e
+    k=pars[7];
+    #Derived parameters
+    er=1 + 11/6*psi;
+    ef=1 + 2/3*psi;
+    ea=0.5 + 3.5/2*psi;
+    yAglucose = 1 - 1/3/er;
+    yAacetate = 1 - 1/2/ea;
+    #Fixed parameters
+    f=1.92 #epsilon_f/epsilon_r
+    z=1;
+        
     #Scaling function for substrate uptake
-    fglucose=Sl/(Km+Sl+Acet) #labelled substrate only
-    facetate=Acet/(Km+Sl+Acet)
+    fglucose=Sl/(Kmglucose+Sl) #labelled substrate only
+    facetate=Acet/(Kmacetate+Acet)
     
     #Isotope signals
-    Gatm = Gl/(Gl + Gu)
-    Batm = Bl/(Bl + Bu)
+    #Batm = Bl/(Bl + Bu)
     
     #Sums of isotope pools
     B = Bl + Bu
-    G = Gl + Gu
-    
-    #Fluxes
-    Uglucose=(Am/yA)*B*fglucose #glucose uptake
-    Uacetate=Am*B*facetate #acetate uptake
+            
+    #Mass fluxes
+    Uglucose=Am/yAglucose*B*fglucose #glucose uptake
+    Uacetate=Am/yAacetate*B*facetate #acetate uptake
     Aglucose = Am*fglucose #glucose assimilation
     Aacetate = Am*facetate #acetate assimilation
-    mobilization = Am*G/Gm
+    Jglucose = Am*G/Gm #mobilization of glucose
+    Jacetate = Am*Ga/Gm #mobilization of acetate
+    
     #Energy fluxes
+    ##Energy flux from acetate mobilization, which is growth independent
+    Jea = Jacetate/(1/ea + 1/edemand)
     ##Defining threshold values for energy fluxes
     v=Am/Gm
-    Gt1 = (-pb*v - m*pg/edemand + ((pb*v + m*pg/edemand)**2 - 4*v*pg*pb*(m/edemand - emax*etar*(1/edemand + 1/er)))**(1/2))/2/v/pg
-    Gt2 = (-pb*v - m*pg/edemand + ((pb*v + m*pg/edemand)**2 - 4*v*pg*pb*(m/edemand - emax*etaf*(1/edemand + 1/ef)))**(1/2))/2/v/pg
+    Gt1 = (-v - z*v*Ga + ((v + z*v*Ga)**2 + 4*z*v*eta*(1/er + 1/edemand))**(1/2))/2/z/v
+    Gt2 = (v + z*v*Ga - ((v + z*v*Ga)**2 + 4*z*v*(eta*f)*(1/ef + 1/edemand))**(1/2))/-2/z/v 
     if G <= Gt1:
         global Jef, Jer
         Jef = 0
-        Jer = (mobilization + m/edemand)/(1/edemand + 1/er)
-        if G > Gt1 and G < Gt2:
-    	    Jef = (mobilization-pb*emax*etar*(1/edemand + 1/er)/(pb + pg*G) + m/edemand)/(1/edemand + 1/ef - etar*(1/edemand + 1/er)/etaf)
-    	    Jer = (-mobilization+pb*emax*etaf*(1/edemand + 1/ef)/(pb + pg*G) - m/edemand)/(etaf*(1/edemand + 1/ef)/etar - 1/edemand - 1/er)
+        Jer = Jglucose/(1/edemand + 1/er)
+        if G > Gt1 and G <= Gt2:
+    	    Jef = (Jglucose - eta*(1/edemand + 1/er)/(1 + z*(G + Ga)))/(1/ef + 1/edemand + (1/er + 1/edemand)/f)
+    	    Jer = (-Jglucose + eta*f*(1/edemand + 1/ef)/(1 + z*(G + Ga)))/(f*(1/ef + 1/edemand) - 1/er - 1/edemand) 
         else:
-    	    Jef = (mobilization + m/edemand)/(1/edemand + 1/ef)
+    	    Jef = Jglucose/(1/edemand + 1/ef)
     	    Jer = 0
     ##Resulting mass fluxes 		
-    growth = (Jer + Jef - m)/edemand
+    growth = (Jer + Jef)/edemand + Jea/edemand
     fermentation = (Jef/ef)*(2/3)
-    respiration = (Jef/ef)*(1/3) + (Jer/er)
+    respiration = (Jef/ef)*(1/3) + (Jer/er) + (Jea/ea)
     
     #Define derivatives
     ##Labelled pools
     dSldt = -Uglucose
-    dGldt = Aglucose + Aacetate - mobilization*Gatm - growth*Gl
-    dBldt = B*max(0, growth)*Gatm + B*min(0, growth)*Batm
-    dCO2ldt = Uglucose*(1 - yA) + B*(respiration+min(0, growth))*Gatm - B*min(0, growth)*Batm
+    dGdt = Aglucose - Jglucose - (growth - k)*G
+    dGadt = Aacetate - Jacetate - (growth - k)*Ga
+    dBldt = B*growth - Bl*k
+    dCO2ldt = B*respiration + Uglucose*(1 - yAglucose) + Uacetate*(1 - yAacetate)
     ##Unabelled pools
     #dSudt
-    dGudt = - mobilization*(1 - Gatm) - growth*Gu
-    dBudt = B*max(0, growth*(1 - Gatm)) + B*min(0, growth*(1 - Batm))
+    dBudt = -k*Bu
     dAcetdt = B*fermentation - Uacetate
         
-    return dSldt, dGldt, dBldt, dCO2ldt, dGudt, dBudt, dAcetdt;
+    return dSldt, dGdt, dGadt, dBldt, dCO2ldt, dBudt, dAcetdt;
